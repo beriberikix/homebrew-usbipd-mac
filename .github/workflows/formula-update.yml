@@ -3,6 +3,12 @@ name: Formula Update
 on:
   repository_dispatch:
     types: [release-published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v0.0.12)'
+        required: true
+        type: string
 
 jobs:
   update:
@@ -12,8 +18,13 @@ jobs:
       - name: 🔍 Extract Release Information
         id: info
         run: |
-          VERSION="${{ github.event.client_payload.release.tag_name }}"
-          SOURCE_REPO="${{ github.event.client_payload.repository }}"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+            SOURCE_REPO="beriberikix/usbipd-mac"
+          else
+            VERSION="${{ github.event.client_payload.release.tag_name }}"
+            SOURCE_REPO="${{ github.event.client_payload.repository }}"
+          fi
           
           echo "📡 Webhook update for $VERSION from $SOURCE_REPO"
           
