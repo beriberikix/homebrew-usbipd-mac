@@ -1,0 +1,225 @@
+name: Formula Update (Final Version)
+
+on:
+  repository_dispatch:
+    types: [release-published]
+
+jobs:
+  update-formula:
+    name: Update Homebrew Formula  
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔍 Extract Release Information
+        id: extract-info
+        run: |
+          echo "::group::Extract Release Information"
+          
+          VERSION="${{ github.event.client_payload.release.tag_name }}"
+          SOURCE_REPO="${{ github.event.client_payload.repository }}"
+          
+          echo "📡 Webhook-triggered update from repository_dispatch"
+          echo "📦 Source Repository: $SOURCE_REPO"
+          echo "🏷️ Release Version: $VERSION"
+          
+          # Validate version format
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]; then
+            echo "::error title=Invalid Version::Version must follow semantic versioning (vX.Y.Z)"
+            exit 1
+          fi
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "source-repo=$SOURCE_REPO" >> $GITHUB_OUTPUT
+          echo "✅ Release information validated"
+          echo "::endgroup::"
+
+      - name: 📥 Checkout Tap Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: 🔧 Setup Environment
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action (Formula Update)"
+
+      - name: 📥 Download Release Metadata
+        id: download-metadata
+        run: |
+          echo "::group::Download Metadata"
+          
+          VERSION="${{ steps.extract-info.outputs.version }}"
+          SOURCE_REPO="${{ steps.extract-info.outputs.source-repo }}"
+          METADATA_URL="https://github.com/$SOURCE_REPO/releases/download/$VERSION/homebrew-metadata.json"
+          
+          echo "📥 Downloading metadata from: $METADATA_URL"
+          
+          max_attempts=3
+          for attempt in 1 2 3; do
+            echo "📥 Download attempt $attempt of $max_attempts..."
+            if curl -L -f -s "$METADATA_URL" -o homebrew-metadata.json; then
+              echo "✅ Metadata downloaded successfully"
+              break
+            else
+              echo "❌ Download attempt $attempt failed"
+              if [ $attempt -eq $max_attempts ]; then
+                echo "::error title=Download Failed::Could not download metadata after $max_attempts attempts"
+                exit 1
+              fi
+              sleep 2
+            fi
+          done
+          
+          # Validate JSON
+          if jq empty homebrew-metadata.json >/dev/null 2>&1; then
+            echo "✅ Metadata is valid JSON"
+          else
+            echo "::error title=Invalid JSON::Downloaded metadata is not valid JSON"
+            exit 1
+          fi
+          
+          echo "::endgroup::"
+
+      - name: 🍺 Update Formula
+        run: |
+          echo "::group::Update Formula"
+          
+          VERSION="${{ steps.extract-info.outputs.version }}"
+          
+          # Extract values from metadata
+          ARCHIVE_URL=$(jq -r '.metadata.archive_url' homebrew-metadata.json)
+          SHA256_CHECKSUM=$(jq -r '.metadata.sha256' homebrew-metadata.json)
+          
+          echo "🍺 Updating formula..."
+          echo "   Version: $VERSION"
+          echo "   Archive URL: $ARCHIVE_URL"
+          echo "   SHA256: $SHA256_CHECKSUM"
+          
+          FORMULA_FILE="Formula/usbipd-mac.rb"
+          if [ ! -f "$FORMULA_FILE" ]; then
+            echo "::error title=Formula Missing::Formula file not found: $FORMULA_FILE"
+            exit 1
+          fi
+          
+          # Create backup
+          cp "$FORMULA_FILE" "$FORMULA_FILE.backup"
+          
+          # Update formula with actual values  
+          sed -i "s|archive/v[0-9][0-9.]*\\.tar\\.gz|archive/$VERSION.tar.gz|g" "$FORMULA_FILE"
+          sed -i "s|version \"v[0-9][0-9.]*\"|version \"$VERSION\"|g" "$FORMULA_FILE"
+          sed -i "s|sha256 \"[a-f0-9]\\{64\\}\"|sha256 \"$SHA256_CHECKSUM\"|g" "$FORMULA_FILE"
+          
+          echo "✅ Formula updated successfully"
+          echo "::endgroup::"
+
+      - name: 🔍 Validate Formula
+        run: |
+          echo "::group::Validate Formula"
+          
+          FORMULA_FILE="Formula/usbipd-mac.rb"
+          VERSION="${{ steps.extract-info.outputs.version }}"
+          SHA256_CHECKSUM=$(jq -r '.metadata.sha256' homebrew-metadata.json)
+          
+          # Ruby syntax validation
+          if ruby -c "$FORMULA_FILE" >/dev/null 2>&1; then
+            echo "✅ Ruby syntax is valid"
+          else
+            echo "::error title=Syntax Error::Formula has Ruby syntax errors"
+            ruby -c "$FORMULA_FILE"
+            exit 1
+          fi
+          
+          # Verify version is present
+          if grep -q "version \"$VERSION\"" "$FORMULA_FILE"; then
+            echo "✅ Version $VERSION found in formula"
+          else
+            echo "::error title=Version Missing::Version $VERSION not found in formula"
+            exit 1
+          fi
+          
+          # Verify SHA256 is present
+          if grep -q "sha256 \"$SHA256_CHECKSUM\"" "$FORMULA_FILE"; then
+            echo "✅ SHA256 checksum found in formula"
+          else
+            echo "::error title=Checksum Missing::SHA256 checksum not found in formula"
+            exit 1
+          fi
+          
+          echo "✅ Formula validation passed"
+          echo "::endgroup::"
+
+      - name: 📄 Commit Formula Changes
+        run: |
+          echo "::group::Commit Changes"
+          
+          VERSION="${{ steps.extract-info.outputs.version }}"
+          SOURCE_REPO="${{ steps.extract-info.outputs.source-repo }}"
+          
+          if git diff --quiet Formula/usbipd-mac.rb; then
+            echo "⚠️ No changes to commit - formula already up to date"
+          else
+            echo "📝 Committing formula changes..."
+            
+            git add Formula/usbipd-mac.rb
+            
+            COMMIT_MSG="feat: update formula to $VERSION - automated webhook update
+
+Automated formula update triggered by release webhook from $SOURCE_REPO
+
+📦 **Version Update:** $VERSION  
+🔗 **Release URL:** https://github.com/$SOURCE_REPO/releases/tag/$VERSION
+🤖 **Triggered:** repository_dispatch webhook automation
+✅ **Validation:** Ruby syntax, version, and checksum verified
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+            
+            git commit -m "$COMMIT_MSG"
+            echo "✅ Formula changes committed"
+          fi
+          
+          echo "::endgroup::"
+
+      - name: 📤 Push Changes
+        run: |
+          echo "::group::Push Changes"
+          
+          if git diff --quiet HEAD~1 HEAD 2>/dev/null; then
+            echo "⚠️ No changes to push"
+          else
+            echo "📤 Pushing changes..."
+            git push origin main
+            echo "✅ Changes pushed successfully"
+          fi
+          
+          echo "::endgroup::"
+
+      - name: 🎉 Success Summary
+        run: |
+          echo "::group::Success Summary"
+          echo "🎉 Formula update completed successfully!"
+          echo ""
+          echo "📦 **Update Details:**"
+          echo "   • Version: ${{ steps.extract-info.outputs.version }}"
+          echo "   • Source Repository: ${{ steps.extract-info.outputs.source-repo }}"
+          echo "   • Trigger: Automated repository_dispatch webhook"
+          echo ""
+          echo "✅ **Completed Steps:**"
+          echo "   • Downloaded and validated release metadata"
+          echo "   • Updated formula with verified version and checksum"
+          echo "   • Validated formula syntax and content"
+          echo "   • Committed and pushed changes to tap repository"
+          echo ""
+          echo "🍺 **Formula Status:**"
+          echo "   • Formula updated successfully"
+          echo "   • Users can install: brew install beriberikix/usbipd-mac/usbipd-mac"
+          echo "   • Users can upgrade: brew upgrade usbipd-mac"
+          echo ""
+          echo "🔗 **External Tap Integration:**"
+          echo "   • ✅ Webhook delivery working"
+          echo "   • ✅ Repository dispatch triggered successfully"
+          echo "   • ✅ Formula updated automatically"
+          echo "   • ✅ End-to-end automation complete"
+          echo "::endgroup::"
