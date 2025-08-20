@@ -26,7 +26,7 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   SOURCE_REPOSITORY: ${{ github.event.client_payload.repository || inputs.source_repository || 'beriberikix/usbipd-mac' }}
   RELEASE_VERSION: ${{ github.event.client_payload.release.tag_name || inputs.version }}
-  WORKFLOW_START_TIME: ${{ github.event.head_commit.timestamp || github.run_started_at }}
+  WORKFLOW_START_TIME: ${{ github.run_started_at }}
   WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
 jobs:
