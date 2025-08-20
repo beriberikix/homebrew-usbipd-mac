@@ -1,0 +1,21 @@
+name: Formula Update Minimal Test
+
+on:
+  repository_dispatch:
+    types: [release-published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version to process (e.g., v1.2.3)'
+        required: true
+        type: string
+
+jobs:
+  test-minimal:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test Minimal Formula Update
+        run: |
+          echo "Version: ${{ inputs.version || 'from-webhook' }}"
+          echo "Event: ${{ github.event_name }}"
+          echo "✅ Minimal formula update workflow is working"
