@@ -1,7 +1,7 @@
-name: Formula Update (Tap Repository Webhook)
+name: Formula Update (External Tap Automation)
 
 # Workflow triggered by repository_dispatch from main repository or manual dispatch
-# Version: 2025-08-20 - Fixed repository_dispatch trigger
+# Version: 2025-08-20 - Fixed repository_dispatch trigger - Fresh registration
 on:
   repository_dispatch:
     types: [release-published]
