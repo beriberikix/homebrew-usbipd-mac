@@ -1,5 +1,6 @@
 name: Formula Update (Tap Repository Webhook)
 
+# Workflow triggered by repository_dispatch from main repository or manual dispatch
 on:
   repository_dispatch:
     types: [release-published]
