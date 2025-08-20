@@ -1,0 +1,18 @@
+name: Test Repository Dispatch
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_message:
+        description: 'Test message'
+        required: true
+        type: string
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test Step
+        run: |
+          echo "Test message: ${{ inputs.test_message }}"
+          echo "✅ Workflow dispatch is working in this repository"
