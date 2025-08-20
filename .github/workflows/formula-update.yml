@@ -22,8 +22,17 @@ jobs:
             VERSION="${{ github.event.inputs.version }}"
             SOURCE_REPO="beriberikix/usbipd-mac"
           else
-            VERSION="${{ github.event.client_payload.release.tag_name }}"
+            # First, try to get version and repo from the new, more direct payload structure
+            VERSION="${{ github.event.client_payload.version }}"
             SOURCE_REPO="${{ github.event.client_payload.repository }}"
+
+            # If the above are empty, fall back to the original structure
+            if [[ -z "$VERSION" ]]; then
+              VERSION="${{ github.event.client_payload.release.tag_name }}"
+            fi
+            if [[ -z "$SOURCE_REPO" ]]; then
+              SOURCE_REPO="beriberikix/usbipd-mac" # Fallback to default
+            fi
           fi
           
           echo "📡 Webhook update for $VERSION from $SOURCE_REPO"
@@ -74,7 +83,7 @@ jobs:
           FORMULA="Formula/usbipd-mac.rb"
           cp "$FORMULA" "$FORMULA.backup"
           
-          sed -i "s|archive/v[0-9][0-9.]*\\.tar\\.gz|archive/$VERSION.tar.gz|g" "$FORMULA"
+          sed -i "s|archive/v[0-9][0-9.]*\.tar\.gz|archive/$VERSION.tar.gz|g" "$FORMULA"
           sed -i "s|version \"v[0-9][0-9.]*\"|version \"$VERSION\"|g" "$FORMULA"
           sed -i "s|sha256 \"[a-f0-9]\\{64\\}\"|sha256 \"$SHA256\"|g" "$FORMULA"
 
