@@ -5,25 +5,18 @@
 class UsbipdMac < Formula
   desc "Macos implementation of the usb/ip protocol"
   homepage "https://github.com/beriberikix/usbipd-mac"
-  url "https://github.com/beriberikix/usbipd-mac/archive/refs/tags/v0.0.17.tar.gz"
-  version "0.0.17"
-  sha256 "343b939bdefc11538265aa7d4bfb3977880929d41b7e6353368d287b6c3513e8"
+  url "https://github.com/beriberikix/usbipd-mac/archive/refs/tags/v0.1.19.tar.gz"
+  version "0.1.19"
+  sha256 "26e97fcbfe041803d12cf06b8a7bfadef84ddc7be5fbf3ec35a4d8553376bac8"
 
-  depends_on :macos => :big_sur
-  depends_on :xcode => ["13.0", :build]
+  on_macos do
+  end
 
   def install
-    # Build configuration with System Extension support
-    system "swift", "build", "--configuration", "release", "--disable-sandbox"
-    
-    # Install the main binary
-    bin.install ".build/release/usbipd"
-    
-    # Note: System Extension installation requires manual setup
-    # See post-install instructions for system extension configuration
+    bin.install "usbipd"
   end
 
   test do
-    assert_match "USB/IP Daemon for macOS", shell_output("#{bin}/usbipd --version")
+    assert_match "usbipd", shell_output("#{bin}/usbipd --version")
   end
 end
