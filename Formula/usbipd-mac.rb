@@ -5,9 +5,9 @@
 class UsbipdMac < Formula
   desc "Macos implementation of the usb/ip protocol"
   homepage "https://github.com/beriberikix/usbipd-mac"
-  url "https://github.com/beriberikix/usbipd-mac/archive/refs/tags/v0.0.16-automated-test.tar.gz"
-  version "0.0.16-automated-test"
-  sha256 "974020077325a9e5925b3968c91bc191054605ff1ca88ad459e7f9689c65cf61"
+  url "https://github.com/beriberikix/usbipd-mac/archive/refs/tags/v0.0.17.tar.gz"
+  version "0.0.17"
+  sha256 "343b939bdefc11538265aa7d4bfb3977880929d41b7e6353368d287b6c3513e8"
 
   on_macos do
   end
