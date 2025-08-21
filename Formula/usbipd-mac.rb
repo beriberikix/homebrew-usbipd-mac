@@ -9,14 +9,27 @@ class UsbipdMac < Formula
   version "0.0.17"
   sha256 "343b939bdefc11538265aa7d4bfb3977880929d41b7e6353368d287b6c3513e8"
 
-  on_macos do
-  end
+  depends_on :macos => :big_sur
+  depends_on :xcode => ["13.0", :build]
 
   def install
-    bin.install "usbipd"
+    # Build configuration with System Extension support
+    system "swift", "build", "--configuration", "release", "--disable-sandbox"
+    
+    # Build System Extension product separately
+    system "swift", "build", "--configuration", "release", "--product", "USBIPDSystemExtension", "--disable-sandbox"
+    
+    # Install the main binary
+    bin.install ".build/release/usbipd"
+    
+    # Install System Extension to Library/SystemExtensions
+    system_ext_dir = prefix/"Library/SystemExtensions"
+    system_ext_dir.mkpath
+    system_ext_bundle = ".build/release/USBIPDSystemExtension.systemextension"
+    system_ext_dir.install system_ext_bundle => "usbipd-mac.systemextension"
   end
 
   test do
-    assert_match "usbipd", shell_output("#{bin}/usbipd --version")
+    assert_match "USB/IP Daemon for macOS", shell_output("#{bin}/usbipd --version")
   end
 end
