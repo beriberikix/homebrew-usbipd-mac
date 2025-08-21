@@ -16,17 +16,11 @@ class UsbipdMac < Formula
     # Build configuration with System Extension support
     system "swift", "build", "--configuration", "release", "--disable-sandbox"
     
-    # Build System Extension product separately
-    system "swift", "build", "--configuration", "release", "--product", "USBIPDSystemExtension", "--disable-sandbox"
-    
     # Install the main binary
     bin.install ".build/release/usbipd"
     
-    # Install System Extension to Library/SystemExtensions
-    system_ext_dir = prefix/"Library/SystemExtensions"
-    system_ext_dir.mkpath
-    system_ext_bundle = ".build/release/USBIPDSystemExtension.systemextension"
-    system_ext_dir.install system_ext_bundle => "usbipd-mac.systemextension"
+    # Note: System Extension installation requires manual setup
+    # See post-install instructions for system extension configuration
   end
 
   test do
