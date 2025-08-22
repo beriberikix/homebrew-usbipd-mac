@@ -30,6 +30,9 @@ jobs:
   update-formula:
     name: Update Homebrew Formula
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
     steps:
       - name: 🔄 Starting Formula Update
         run: |
