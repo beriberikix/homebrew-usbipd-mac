@@ -9,12 +9,12 @@ on:
         description: 'Release version (e.g., v1.2.3)'
         required: true
         type: string
-      archive_url:
-        description: 'GitHub source archive URL'
+      binary_url:
+        description: 'GitHub binary download URL'
         required: true
         type: string
       sha256:
-        description: 'SHA256 checksum of the archive'
+        description: 'SHA256 checksum of the binary'
         required: true
         type: string
       test_mode:
@@ -85,7 +85,7 @@ jobs:
           if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
             echo "📨 Processing repository dispatch event"
             VERSION="${{ github.event.client_payload.version }}"
-            ARCHIVE_URL="${{ github.event.client_payload.archive_url }}"
+            BINARY_URL="${{ github.event.client_payload.binary_url }}"
             SHA256="${{ github.event.client_payload.sha256 }}"
             TIMESTAMP="${{ github.event.client_payload.timestamp }}"
             SOURCE_REPO="${{ github.event.client_payload.source_repository }}"
@@ -96,7 +96,7 @@ jobs:
           else
             echo "🔧 Processing manual workflow dispatch"
             VERSION="${{ github.event.inputs.version }}"
-            ARCHIVE_URL="${{ github.event.inputs.archive_url }}"
+            BINARY_URL="${{ github.event.inputs.binary_url }}"
             SHA256="${{ github.event.inputs.sha256 }}"
             TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
             SOURCE_REPO="manual"
@@ -107,7 +107,7 @@ jobs:
           fi
           
           # Validate required fields
-          if [[ -z "$VERSION" || -z "$ARCHIVE_URL" || -z "$SHA256" ]]; then
+          if [[ -z "$VERSION" || -z "$BINARY_URL" || -z "$SHA256" ]]; then
             echo "::error title=Missing Payload::Required payload fields are missing"
             exit 1
           fi
@@ -126,7 +126,7 @@ jobs:
           
           echo "✅ Payload validated successfully:"
           echo "   • Version: $VERSION"
-          echo "   • Archive URL: $ARCHIVE_URL"
+          echo "   • Binary URL: $BINARY_URL"
           echo "   • SHA256: ${SHA256:0:16}..."
           echo "   • Timestamp: $TIMESTAMP"
           echo "   • Source: $SOURCE_REPO"
@@ -136,7 +136,7 @@ jobs:
           
           # Output values for subsequent steps
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "archive_url=$ARCHIVE_URL" >> $GITHUB_OUTPUT
+          echo "binary_url=$BINARY_URL" >> $GITHUB_OUTPUT
           echo "sha256=$SHA256" >> $GITHUB_OUTPUT
           echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
           echo "source_repo=$SOURCE_REPO" >> $GITHUB_OUTPUT
@@ -153,19 +153,19 @@ jobs:
           echo "::notice title=Binary Validation::Validating and downloading release binary"
           
           VERSION="${{ steps.extract-payload.outputs.version }}"
-          ARCHIVE_URL="${{ steps.extract-payload.outputs.archive_url }}"
+          BINARY_URL="${{ steps.extract-payload.outputs.binary_url }}"
           EXPECTED_SHA256="${{ steps.extract-payload.outputs.sha256 }}"
           
           echo "🔍 Validating binary for version $VERSION"
-          echo "   • Archive URL: $ARCHIVE_URL"
+          echo "   • Binary URL: $BINARY_URL"
           echo "   • Expected SHA256: ${EXPECTED_SHA256:0:16}..."
           
-          # Download and verify the archive
-          echo "📥 Downloading archive..."
-          curl -fsSL "$ARCHIVE_URL" -o archive.tar.gz
+          # Download and verify the binary
+          echo "📥 Downloading binary..."
+          curl -fsSL "$BINARY_URL" -o downloaded-binary
           
           # Calculate actual SHA256
-          ACTUAL_SHA256=$(shasum -a 256 archive.tar.gz | cut -d' ' -f1)
+          ACTUAL_SHA256=$(shasum -a 256 downloaded-binary | cut -d' ' -f1)
           
           echo "📊 Checksum verification:"
           echo "   • Expected: $EXPECTED_SHA256"
@@ -180,11 +180,11 @@ jobs:
           fi
           
           echo "✅ Binary validation successful"
-          echo "   • Archive downloaded and verified"
+          echo "   • Binary downloaded and verified"
           echo "   • SHA256 checksum matches expected value"
           
           # Clean up downloaded file
-          rm -f archive.tar.gz
+          rm -f downloaded-binary
           
           echo "validated=true" >> $GITHUB_OUTPUT
           echo "::endgroup::"
@@ -196,7 +196,7 @@ jobs:
           echo "::notice title=Formula Update::Updating Homebrew formula with new version"
           
           VERSION="${{ steps.extract-payload.outputs.version }}"
-          ARCHIVE_URL="${{ steps.extract-payload.outputs.archive_url }}"
+          BINARY_URL="${{ steps.extract-payload.outputs.binary_url }}"
           SHA256="${{ steps.extract-payload.outputs.sha256 }}"
           TEST_MODE="${{ steps.extract-payload.outputs.test_mode }}"
           
@@ -213,14 +213,14 @@ jobs:
             echo "🧪 Running in test mode (dry-run)"
             ./Scripts/update-formula-from-dispatch.sh \
               --version "$VERSION" \
-              --archive-url "$ARCHIVE_URL" \
+              --binary-url "$BINARY_URL" \
               --sha256 "$SHA256" \
               --dry-run
           else
             echo "🚀 Running in production mode"
             ./Scripts/update-formula-from-dispatch.sh \
               --version "$VERSION" \
-              --archive-url "$ARCHIVE_URL" \
+              --binary-url "$BINARY_URL" \
               --sha256 "$SHA256"
           fi
           
@@ -233,7 +233,7 @@ jobs:
           echo "::notice title=Update Complete::Formula update completed successfully"
           echo "🏺 Formula update summary:"
           echo "   • Version: ${{ steps.extract-payload.outputs.version }}"
-          echo "   • Archive URL: ${{ steps.extract-payload.outputs.archive_url }}"
+          echo "   • Binary URL: ${{ steps.extract-payload.outputs.binary_url }}"
           echo "   • SHA256: ${{ steps.extract-payload.outputs.sha256 }}"
           echo "   • Timestamp: ${{ steps.extract-payload.outputs.timestamp }}"
           echo "   • Source Repository: ${{ steps.extract-payload.outputs.source_repo }}"

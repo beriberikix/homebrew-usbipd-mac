@@ -23,7 +23,7 @@ readonly NC='\033[0m' # No Color
 
 # Global variables
 VERSION=""
-ARCHIVE_URL=""
+BINARY_URL=""
 SHA256=""
 DRY_RUN=false
 VERBOSE=false
@@ -76,7 +76,7 @@ Formula update script for processing repository dispatch events.
 
 OPTIONS:
     --version VERSION       Release version (e.g., v1.2.3)
-    --archive-url URL       GitHub source archive URL
+    --binary-url URL        GitHub binary download URL
     --sha256 CHECKSUM      SHA256 checksum of the archive
     --dry-run              Preview changes without modifying files
     --skip-commit          Skip git commit after formula update
@@ -88,13 +88,13 @@ EXAMPLES:
     # Update formula from dispatch payload
     $SCRIPT_NAME \
         --version "v1.2.3" \
-        --archive-url "https://github.com/beriberikix/usbipd-mac/archive/v1.2.3.tar.gz" \
+        --binary-url "https://github.com/beriberikix/usbipd-mac/releases/download/v1.2.3/usbipd-v1.2.3-macos" \
         --sha256 "abc123..."
 
     # Dry run to preview changes
     $SCRIPT_NAME \
         --version "v1.2.3" \
-        --archive-url "https://github.com/beriberikix/usbipd-mac/archive/v1.2.3.tar.gz" \
+        --binary-url "https://github.com/beriberikix/usbipd-mac/releases/download/v1.2.3/usbipd-v1.2.3-macos" \
         --sha256 "abc123..." \
         --dry-run
 
@@ -119,11 +119,11 @@ validate_version() {
     return 0
 }
 
-validate_archive_url() {
+validate_binary_url() {
     local url="$1"
-    if [[ ! "$url" =~ ^https://github\.com/.+/archive/.+\.tar\.gz$ ]]; then
-        log_error "Invalid archive URL format: $url"
-        log_error "Must be a GitHub archive URL"
+    if [[ ! "$url" =~ ^https://github\.com/.+/releases/download/.+/.+ ]]; then
+        log_error "Invalid binary URL format: $url"
+        log_error "Must be a GitHub binary download URL"
         return 1
     fi
     return 0
@@ -422,7 +422,7 @@ update_formula() {
     
     # Validate inputs
     validate_version "$VERSION" || return 2
-    validate_archive_url "$ARCHIVE_URL" || return 2
+    validate_binary_url "$BINARY_URL" || return 2
     validate_sha256 "$SHA256" || return 2
     
     # Check dependencies
@@ -431,7 +431,7 @@ update_formula() {
     # Display configuration
     log_info "Configuration:"
     log_info "  • Version: $VERSION"
-    log_info "  • Archive URL: $ARCHIVE_URL"
+    log_info "  • Binary URL: $BINARY_URL"
     log_info "  • SHA256: ${SHA256:0:16}..."
     log_info "  • Formula file: $FORMULA_FILE"
     log_info "  • Dry run: $DRY_RUN"
@@ -440,7 +440,7 @@ update_formula() {
     echo
     
     # Update the formula
-    if ! update_formula_file "$FORMULA_FILE" "$VERSION" "$ARCHIVE_URL" "$SHA256" "$DRY_RUN"; then
+    if ! update_formula_file "$FORMULA_FILE" "$VERSION" "$BINARY_URL" "$SHA256" "$DRY_RUN"; then
         log_error "Formula update failed"
         return 4
     fi
@@ -483,8 +483,8 @@ parse_arguments() {
                 VERSION="$2"
                 shift 2
                 ;; 
-            --archive-url)
-                ARCHIVE_URL="$2"
+            --binary-url)
+                BINARY_URL="$2"
                 shift 2
                 ;; 
             --sha256)
@@ -525,8 +525,8 @@ parse_arguments() {
         exit 2
     fi
     
-    if [[ -z "$ARCHIVE_URL" ]]; then
-        log_error "Missing required argument: --archive-url"
+    if [[ -z "$BINARY_URL" ]]; then
+        log_error "Missing required argument: --binary-url"
         exit 2
     fi
     

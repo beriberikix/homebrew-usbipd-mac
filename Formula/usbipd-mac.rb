@@ -4,14 +4,14 @@
 class UsbipdMac < Formula
   desc "Macos implementation of the usb/ip protocol"
   homepage "https://github.com/beriberikix/usbipd-mac"
-  url "https://github.com/beriberikix/usbipd-mac/releases/download/v0.1.19/usbipd-v0.1.19-macos"
-  version "0.1.19"
-  sha256 "0ef14acd5f91a291bdfa3f1c6a7564ae17a5e1aa5b40ebce6ab1479b294fafef"
+  url "https://github.com/beriberikix/usbipd-mac/releases/download/v0.1.20/usbipd-v0.1.20-macos"
+  version "0.1.20"
+  sha256 "c7640295c7e018e0c674a9c2db4bf36357d73015fa15355a68085a320cbaa223"
 
   depends_on :macos => :big_sur
 
   def install
-    bin.install "usbipd-v0.1.19-macos" => "usbipd"
+    bin.install "usbipd-v0.1.20-macos" => "usbipd"
   end
 
   test do
