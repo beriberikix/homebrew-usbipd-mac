@@ -23,8 +23,10 @@ class UsbipdMac < Formula
     resource("systemextension").stage do
       # Create system extension directory in Homebrew prefix
       (prefix/"SystemExtensions").mkpath
-      # Find and copy the system extension bundle
-      system "find", ".", "-name", "*.systemextension", "-exec", "cp", "-R", "{}", "#{prefix}/SystemExtensions/", ";"
+      # Debug: list contents of staged directory
+      system "ls", "-la"
+      # Copy all contents from staged directory
+      system "cp", "-R", "*", "#{prefix}/SystemExtensions/" 
     end
   end
 
