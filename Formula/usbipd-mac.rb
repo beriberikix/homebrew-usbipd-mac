@@ -23,8 +23,8 @@ class UsbipdMac < Formula
     resource("systemextension").stage do
       # Create system extension directory in Homebrew prefix
       (prefix/"SystemExtensions").mkpath
-      # Copy the entire contents of the staged directory (which contains the bundle)
-      system "/bin/cp", "-R", ".", "#{prefix}/SystemExtensions/"
+      # Copy the system extension bundle using Homebrew's preferred method
+      (Pathname.pwd/"USBIPDSystemExtension.systemextension").cp_r(prefix/"SystemExtensions")
     end
   end
 
