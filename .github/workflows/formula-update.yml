@@ -1,0 +1,295 @@
+name: Formula Update via Repository Dispatch
+
+on:
+  repository_dispatch:
+    types: [formula_update]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.2.3)'
+        required: true
+        type: string
+      archive_url:
+        description: 'GitHub source archive URL'
+        required: true
+        type: string
+      sha256:
+        description: 'SHA256 checksum of the archive'
+        required: true
+        type: string
+      test_mode:
+        description: 'Run in test mode (dry-run)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  update-formula:
+    name: Update Homebrew Formula
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔄 Starting Formula Update
+        run: |
+          echo "::notice title=Formula Update::Starting automated Homebrew formula update"
+          echo "🔄 This workflow processes repository dispatch events to update the formula"
+          echo "📊 Status: STARTING"
+
+      - name: Checkout tap repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: 🔧 Setup Environment
+        run: |
+          echo "::group::Environment Setup"
+          echo "::notice title=Environment Setup::Setting up required tools and environment"
+          
+          # Update package lists
+          sudo apt-get update
+          
+          # Install required tools
+          echo "📦 Installing required tools..."
+          sudo apt-get install -y curl jq git
+          
+          # Install GitHub CLI if not available
+          if ! command -v gh >/dev/null 2>&1; then
+            echo "📦 Installing GitHub CLI..."
+            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+            sudo apt-get update
+            sudo apt-get install -y gh
+          fi
+          
+          # Install Ruby for formula validation
+          echo "📦 Setting up Ruby environment..."
+          sudo apt-get install -y ruby-full
+          
+          # Configure git
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          echo "✅ Environment setup completed"
+          echo "::endgroup::"
+
+      - name: 📋 Extract Dispatch Payload
+        id: extract-payload
+        run: |
+          echo "::group::Payload Extraction"
+          echo "::notice title=Payload Extraction::Extracting metadata from repository dispatch event"
+          
+          # Determine source of payload (dispatch event or manual input)
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo "📨 Processing repository dispatch event"
+            VERSION="${{ github.event.client_payload.version }}"
+            ARCHIVE_URL="${{ github.event.client_payload.archive_url }}"
+            SHA256="${{ github.event.client_payload.sha256 }}"
+            TIMESTAMP="${{ github.event.client_payload.timestamp }}"
+            SOURCE_REPO="${{ github.event.client_payload.source_repository }}"
+            SOURCE_WORKFLOW="${{ github.event.client_payload.source_workflow_run }}"
+            TRIGGERED_BY="${{ github.event.client_payload.triggered_by }}"
+            PRERELEASE="${{ github.event.client_payload.prerelease }}"
+            TEST_MODE="false"
+          else
+            echo "🔧 Processing manual workflow dispatch"
+            VERSION="${{ github.event.inputs.version }}"
+            ARCHIVE_URL="${{ github.event.inputs.archive_url }}"
+            SHA256="${{ github.event.inputs.sha256 }}"
+            TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+            SOURCE_REPO="manual"
+            SOURCE_WORKFLOW="manual"
+            TRIGGERED_BY="${{ github.actor }}"
+            PRERELEASE="false"
+            TEST_MODE="${{ github.event.inputs.test_mode }}"
+          fi
+          
+          # Validate required fields
+          if [[ -z "$VERSION" || -z "$ARCHIVE_URL" || -z "$SHA256" ]]; then
+            echo "::error title=Missing Payload::Required payload fields are missing"
+            exit 1
+          fi
+          
+          # Validate version format
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]; then
+            echo "::error title=Invalid Version::Version must follow semantic versioning"
+            exit 1
+          fi
+          
+          # Validate SHA256 format
+          if [[ ! "$SHA256" =~ ^[a-fA-F0-9]{64}$ ]]; then
+            echo "::error title=Invalid SHA256::SHA256 checksum format is invalid"
+            exit 1
+          fi
+          
+          echo "✅ Payload validated successfully:"
+          echo "   • Version: $VERSION"
+          echo "   • Archive URL: $ARCHIVE_URL"
+          echo "   • SHA256: ${SHA256:0:16}..."
+          echo "   • Timestamp: $TIMESTAMP"
+          echo "   • Source: $SOURCE_REPO"
+          echo "   • Triggered by: $TRIGGERED_BY"
+          echo "   • Pre-release: $PRERELEASE"
+          echo "   • Test mode: $TEST_MODE"
+          
+          # Output values for subsequent steps
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "archive_url=$ARCHIVE_URL" >> $GITHUB_OUTPUT
+          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+          echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
+          echo "source_repo=$SOURCE_REPO" >> $GITHUB_OUTPUT
+          echo "source_workflow=$SOURCE_WORKFLOW" >> $GITHUB_OUTPUT
+          echo "triggered_by=$TRIGGERED_BY" >> $GITHUB_OUTPUT
+          echo "prerelease=$PRERELEASE" >> $GITHUB_OUTPUT
+          echo "test_mode=$TEST_MODE" >> $GITHUB_OUTPUT
+          echo "::endgroup::"
+
+      - name: 🔍 Validate Binary and Download
+        id: validate-binary
+        run: |
+          echo "::group::Binary Validation"
+          echo "::notice title=Binary Validation::Validating and downloading release binary"
+          
+          VERSION="${{ steps.extract-payload.outputs.version }}"
+          ARCHIVE_URL="${{ steps.extract-payload.outputs.archive_url }}"
+          EXPECTED_SHA256="${{ steps.extract-payload.outputs.sha256 }}"
+          
+          echo "🔍 Validating binary for version $VERSION"
+          echo "   • Archive URL: $ARCHIVE_URL"
+          echo "   • Expected SHA256: ${EXPECTED_SHA256:0:16}..."
+          
+          # Download and verify the archive
+          echo "📥 Downloading archive..."
+          curl -fsSL "$ARCHIVE_URL" -o archive.tar.gz
+          
+          # Calculate actual SHA256
+          ACTUAL_SHA256=$(shasum -a 256 archive.tar.gz | cut -d' ' -f1)
+          
+          echo "📊 Checksum verification:"
+          echo "   • Expected: $EXPECTED_SHA256"
+          echo "   • Actual:   $ACTUAL_SHA256"
+          
+          # Verify checksums match
+          if [ "$ACTUAL_SHA256" != "$EXPECTED_SHA256" ]; then
+            echo "::error title=Checksum Mismatch::Binary checksum verification failed"
+            echo "❌ Expected: $EXPECTED_SHA256"
+            echo "❌ Actual:   $ACTUAL_SHA256"
+            exit 1
+          fi
+          
+          echo "✅ Binary validation successful"
+          echo "   • Archive downloaded and verified"
+          echo "   • SHA256 checksum matches expected value"
+          
+          # Clean up downloaded file
+          rm -f archive.tar.gz
+          
+          echo "validated=true" >> $GITHUB_OUTPUT
+          echo "::endgroup::"
+
+      - name: 🏺 Update Formula
+        id: update-formula
+        run: |
+          echo "::group::Formula Update"
+          echo "::notice title=Formula Update::Updating Homebrew formula with new version"
+          
+          VERSION="${{ steps.extract-payload.outputs.version }}"
+          ARCHIVE_URL="${{ steps.extract-payload.outputs.archive_url }}"
+          SHA256="${{ steps.extract-payload.outputs.sha256 }}"
+          TEST_MODE="${{ steps.extract-payload.outputs.test_mode }}"
+          
+          echo "🏺 Updating formula to version $VERSION"
+          
+          # Make Scripts directory executable if it exists
+          if [ -d "Scripts" ]; then
+            chmod +x Scripts/*.sh 2>/dev/null || true
+          fi
+          
+          # Call the formula update script (will be created in next task)
+          echo "🔧 Running formula update script..."
+          if [ "$TEST_MODE" = "true" ]; then
+            echo "🧪 Running in test mode (dry-run)"
+            ./Scripts/update-formula-from-dispatch.sh \
+              --version "$VERSION" \
+              --archive-url "$ARCHIVE_URL" \
+              --sha256 "$SHA256" \
+              --dry-run
+          else
+            echo "🚀 Running in production mode"
+            ./Scripts/update-formula-from-dispatch.sh \
+              --version "$VERSION" \
+              --archive-url "$ARCHIVE_URL" \
+              --sha256 "$SHA256"
+          fi
+          
+          echo "formula_updated=true" >> $GITHUB_OUTPUT
+          echo "::endgroup::"
+
+      - name: 📊 Formula Update Summary
+        run: |
+          echo "::group::Formula Update Summary"
+          echo "::notice title=Update Complete::Formula update completed successfully"
+          echo "🏺 Formula update summary:"
+          echo "   • Version: ${{ steps.extract-payload.outputs.version }}"
+          echo "   • Archive URL: ${{ steps.extract-payload.outputs.archive_url }}"
+          echo "   • SHA256: ${{ steps.extract-payload.outputs.sha256 }}"
+          echo "   • Timestamp: ${{ steps.extract-payload.outputs.timestamp }}"
+          echo "   • Source Repository: ${{ steps.extract-payload.outputs.source_repo }}"
+          echo "   • Triggered by: ${{ steps.extract-payload.outputs.triggered_by }}"
+          echo "   • Pre-release: ${{ steps.extract-payload.outputs.prerelease }}"
+          echo "   • Test mode: ${{ steps.extract-payload.outputs.test_mode }}"
+          echo "   • Binary validated: ${{ steps.validate-binary.outputs.validated }}"
+          echo "   • Formula updated: ${{ steps.update-formula.outputs.formula_updated }}"
+          echo ""
+          echo "✅ Formula update completed successfully"
+          echo "🔄 Users can now upgrade via: brew upgrade usbipd-mac"
+          echo "📋 Formula committed to tap repository"
+          echo "::endgroup::"
+
+  handle-failure:
+    name: Handle Update Failure
+    runs-on: ubuntu-latest
+    needs: [update-formula]
+    if: failure()
+    steps:
+      - name: ❌ Formula Update Failed
+        run: |
+          echo "::error title=Formula Update Failed::Formula update workflow failed"
+          echo "❌ The formula update process encountered an error"
+          echo "🔧 Manual intervention may be required"
+
+      - name: Checkout tap repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🔧 Setup GitHub CLI
+        run: |
+          # Install GitHub CLI if not available
+          if ! command -v gh >/dev/null 2>&1; then
+            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+            sudo apt-get update
+            sudo apt-get install -y gh
+          fi
+
+      - name: 📝 Create Failure Issue
+        run: |
+          echo "📝 Creating issue for failed formula update..."
+          
+          # Make Scripts directory executable if it exists
+          if [ -d "Scripts" ]; then
+            chmod +x Scripts/*.sh 2>/dev/null || true
+          fi
+          
+          # Call the issue creation script (will be created in future task)
+          if [ -f "Scripts/create-update-issue.sh" ]; then
+            ./Scripts/create-update-issue.sh \
+              --workflow-run "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+              --event-type "${{ github.event_name }}" \
+              --failure-stage "formula-update"
+          else
+            echo "⚠️ Issue creation script not found - skipping issue creation"
+          fi
