@@ -24,29 +24,22 @@ class UsbipdMac < Formula
       # Create system extension directory in Homebrew prefix
       (prefix/"SystemExtensions").mkpath
       
-      # Show what we have in the staged directory
-      puts "=== Staged directory contents ==="
-      puts Dir.glob("*").inspect
-      puts "=== .systemextension files ==="
-      puts Dir.glob("*.systemextension").inspect
-      
-      # Find and copy any .systemextension directory
-      Dir.glob("*.systemextension") do |bundle|
-        puts "Found bundle: #{bundle}"
-        cp_r bundle, prefix/"SystemExtensions"
-        puts "Copied bundle to: #{prefix/'SystemExtensions'/bundle}"
-      end
-      
-      # If no .systemextension found, try other patterns
-      if Dir.glob("*.systemextension").empty?
-        puts "No .systemextension files found, trying all directories..."
-        Dir.glob("*").select { |f| File.directory?(f) }.each do |dir|
-          puts "Found directory: #{dir}"
-          if dir.end_with?(".systemextension") || dir.include?("SystemExtension")
-            puts "Copying directory: #{dir}"
-            cp_r dir, prefix/"SystemExtensions"
-          end
+      # The tar.gz extracts to just "Contents" directory, so we need to reconstruct the bundle
+      if Dir.exist?("Contents")
+        puts "Found Contents directory, reconstructing system extension bundle..."
+        bundle_dir = prefix/"SystemExtensions"/"USBIPDSystemExtension.systemextension"
+        bundle_dir.mkpath
+        cp_r "Contents", bundle_dir
+        puts "System extension bundle created at: #{bundle_dir}"
+      elsif Dir.glob("*.systemextension").any?
+        # If we have a .systemextension directory, copy it directly
+        Dir.glob("*.systemextension") do |bundle|
+          puts "Found system extension bundle: #{bundle}"
+          cp_r bundle, prefix/"SystemExtensions"
         end
+      else
+        puts "Warning: No system extension bundle found in staged directory"
+        puts "Contents: #{Dir.glob('*').inspect}"
       end
     end
   end
