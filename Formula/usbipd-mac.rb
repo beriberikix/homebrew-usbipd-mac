@@ -24,7 +24,7 @@ class UsbipdMac < Formula
       # Create system extension directory in Homebrew prefix
       (prefix/"SystemExtensions").mkpath
       # Copy the system extension bundle using Homebrew's preferred method
-      (Pathname.pwd/"USBIPDSystemExtension.systemextension").cp_r(prefix/"SystemExtensions")
+      cp_r "USBIPDSystemExtension.systemextension", prefix/"SystemExtensions"
     end
   end
 
