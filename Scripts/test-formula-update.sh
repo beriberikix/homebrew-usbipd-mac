@@ -143,7 +143,7 @@ test_valid_formula_update() {
     local test_content="mock binary content for testing"
     local test_sha256=$(echo -n "${test_content}" | shasum -a 256 | cut -d' ' -f1)
     local test_binary="${TEST_TEMP_DIR}/usbipd-v99.99.99-macos"
-    local test_url="file://${test_binary}"
+    local test_url="https://github.com/beriberikix/usbipd-mac/archive/refs/tags/v99.99.99.tar.gz"
     
     # Create mock binary
     create_mock_binary "${test_binary}" "${test_content}"
@@ -151,8 +151,8 @@ test_valid_formula_update() {
     # Create mock payload
     create_mock_payload "${test_version}" "${test_url}" "${test_sha256}"
     
-    # Test binary validation
-    if "${SCRIPT_DIR}/validate-binary.sh" "${test_url}" "${test_sha256}" > "${TEST_TEMP_DIR}/validate.log" 2>&1; then
+    # Test binary validation (dry-run mode for URL format validation)
+    if "${SCRIPT_DIR}/validate-binary.sh" --archive-url "${test_url}" --expected-sha256 "${test_sha256}" --dry-run > "${TEST_TEMP_DIR}/validate.log" 2>&1; then
         record_test_result "Binary validation (valid)" "PASS"
     else
         record_test_result "Binary validation (valid)" "FAIL" "$(cat "${TEST_TEMP_DIR}/validate.log")"
@@ -189,13 +189,13 @@ test_invalid_checksum() {
     local test_content="different content"
     local wrong_sha256="0000000000000000000000000000000000000000000000000000000000000000"
     local test_binary="${TEST_TEMP_DIR}/usbipd-v88.88.88-macos"
-    local test_url="file://${test_binary}"
+    local test_url="https://github.com/beriberikix/usbipd-mac/archive/refs/tags/v88.88.88.tar.gz"
     
     # Create mock binary
     create_mock_binary "${test_binary}" "${test_content}"
     
     # Test binary validation should fail
-    if ! "${SCRIPT_DIR}/validate-binary.sh" "${test_url}" "${wrong_sha256}" > "${TEST_TEMP_DIR}/validate_fail.log" 2>&1; then
+    if ! "${SCRIPT_DIR}/validate-binary.sh" --archive-url "${test_url}" --expected-sha256 "${wrong_sha256}" > "${TEST_TEMP_DIR}/validate_fail.log" 2>&1; then
         record_test_result "Binary validation (invalid checksum)" "PASS"
     else
         record_test_result "Binary validation (invalid checksum)" "FAIL" "Should have failed checksum validation"
@@ -206,11 +206,11 @@ test_invalid_checksum() {
 test_missing_binary() {
     log_info "Testing missing binary handling..."
     
-    local test_url="file://${TEST_TEMP_DIR}/nonexistent-binary"
+    local test_url="https://github.com/beriberikix/usbipd-mac/archive/refs/tags/v77.77.77.tar.gz"
     local test_sha256="1234567890abcdef"
     
     # Test binary validation should fail
-    if ! "${SCRIPT_DIR}/validate-binary.sh" "${test_url}" "${test_sha256}" > "${TEST_TEMP_DIR}/missing.log" 2>&1; then
+    if ! "${SCRIPT_DIR}/validate-binary.sh" --archive-url "${test_url}" --expected-sha256 "${test_sha256}" > "${TEST_TEMP_DIR}/missing.log" 2>&1; then
         record_test_result "Binary validation (missing binary)" "PASS"
     else
         record_test_result "Binary validation (missing binary)" "FAIL" "Should have failed for missing binary"
@@ -292,8 +292,7 @@ test_error_handling() {
     # Test issue creation with mock data (dry run)
     if command -v gh >/dev/null 2>&1; then
         # Only test if gh CLI is available
-        export DRY_RUN=true
-        if "${issue_script}" "Test error" "validation" "v99.99.99" "Test error details" > "${TEST_TEMP_DIR}/issue.log" 2>&1; then
+        if "${issue_script}" --workflow-run "https://github.com/beriberikix/homebrew-usbipd-mac/actions/runs/123456789" --event-type "test" --failure-stage "validation" --dry-run > "${TEST_TEMP_DIR}/issue.log" 2>&1; then
             record_test_result "Issue creation (dry run)" "PASS"
         else
             record_test_result "Issue creation (dry run)" "FAIL" "$(cat "${TEST_TEMP_DIR}/issue.log")"
