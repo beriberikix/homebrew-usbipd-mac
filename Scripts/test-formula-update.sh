@@ -163,17 +163,12 @@ test_valid_formula_update() {
     if "${SCRIPT_DIR}/update-formula-from-dispatch.sh" --version "${test_version}" --archive-url "${test_url}" --sha256 "${test_sha256}" --dry-run > "${TEST_TEMP_DIR}/update.log" 2>&1; then
         record_test_result "Formula update (valid)" "PASS"
         
-        # Verify formula was updated
-        if grep -q "${test_version}" "${REPO_ROOT}/Formula/usbipd-mac.rb"; then
-            record_test_result "Formula version update" "PASS"
+        # In dry-run mode, check that the script completed successfully
+        # and that the formula file was NOT actually modified
+        if ! grep -q "${test_version}" "${REPO_ROOT}/Formula/usbipd-mac.rb"; then
+            record_test_result "Formula dry-run behavior" "PASS"
         else
-            record_test_result "Formula version update" "FAIL" "Version not found in formula"
-        fi
-        
-        if grep -q "${test_sha256}" "${REPO_ROOT}/Formula/usbipd-mac.rb"; then
-            record_test_result "Formula SHA256 update" "PASS"
-        else
-            record_test_result "Formula SHA256 update" "FAIL" "SHA256 not found in formula"
+            record_test_result "Formula dry-run behavior" "FAIL" "Formula should not be modified in dry-run mode"
         fi
     else
         record_test_result "Formula update (valid)" "FAIL" "$(cat "${TEST_TEMP_DIR}/update.log")"
