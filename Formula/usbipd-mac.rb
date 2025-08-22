@@ -23,9 +23,30 @@ class UsbipdMac < Formula
     resource("systemextension").stage do
       # Create system extension directory in Homebrew prefix
       (prefix/"SystemExtensions").mkpath
+      
+      # Show what we have in the staged directory
+      puts "=== Staged directory contents ==="
+      puts Dir.glob("*").inspect
+      puts "=== .systemextension files ==="
+      puts Dir.glob("*.systemextension").inspect
+      
       # Find and copy any .systemextension directory
       Dir.glob("*.systemextension") do |bundle|
+        puts "Found bundle: #{bundle}"
         cp_r bundle, prefix/"SystemExtensions"
+        puts "Copied bundle to: #{prefix/'SystemExtensions'/bundle}"
+      end
+      
+      # If no .systemextension found, try other patterns
+      if Dir.glob("*.systemextension").empty?
+        puts "No .systemextension files found, trying all directories..."
+        Dir.glob("*").select { |f| File.directory?(f) }.each do |dir|
+          puts "Found directory: #{dir}"
+          if dir.end_with?(".systemextension") || dir.include?("SystemExtension")
+            puts "Copying directory: #{dir}"
+            cp_r dir, prefix/"SystemExtensions"
+          end
+        end
       end
     end
   end
