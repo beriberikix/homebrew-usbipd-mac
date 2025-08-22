@@ -200,7 +200,7 @@ update_formula_file() {
     
     log_info "Formula update details:"
     log_info "  • Version: $version"
-    log_info "  • Archive URL: $archive_url"
+    log_info "  • Binary URL: $archive_url"
     log_info "  • SHA256: ${sha256:0:16}..."
     
     if [[ "$dry_run" == "true" ]]; then
@@ -209,18 +209,19 @@ update_formula_file() {
         cp "$formula_file" "$temp_formula"
         
         # Apply substitutions to temp file
-        sed -i.bak "s|archive/v[0-9][0-9.]*\.tar\.gz|archive/$version.tar.gz|g" "$temp_formula"
-        sed -i.bak "s|version \"v[0-9][0-9.]*\"|version \"$version\"|g" "$temp_formula"
+        sed -i.bak "s|/releases/download/v[0-9][0-9.]*/usbipd-v[0-9][0-9.]*-macos|/releases/download/$version/usbipd-$version-macos|g" "$temp_formula"
+        sed -i.bak "s|version \"[0-9][0-9.]*\"|version \"${version#v}\"|g" "$temp_formula"
         sed -i.bak "s|sha256 \"[a-f0-9]\{64\}\"|sha256 \"$sha256\"|g" "$temp_formula"
+        sed -i.bak "s|bin.install \"usbipd-v[0-9][0-9.]*-macos\"|bin.install \"usbipd-$version-macos\"|g" "$temp_formula"
         
         # Show differences
         log_info "DRY-RUN: Would make the following changes:"
         echo
         echo "--- Current Formula (relevant lines) ---"
-        grep -E "(version|sha256|archive)" "$formula_file" | head -5 || echo "No matching lines found"
+        grep -E "(version|sha256|url)" "$formula_file" | head -5 || echo "No matching lines found"
         echo
         echo "--- Proposed Changes (relevant lines) ---"
-        grep -E "(version|sha256|archive)" "$temp_formula" | head -5 || echo "No matching lines found"
+        grep -E "(version|sha256|url)" "$temp_formula" | head -5 || echo "No matching lines found"
         echo
         
         log_success "DRY-RUN: Preview completed. No files were modified."
@@ -233,14 +234,17 @@ update_formula_file() {
     # Apply actual updates to formula file
     log_debug "Applying formula updates"
     
-    # Update version in archive URL
-    sed -i.tmp "s|archive/v[0-9][0-9.]*\.tar\.gz|archive/$version.tar.gz|g" "$formula_file"
+    # Update version in binary download URL
+    sed -i.tmp "s|/releases/download/v[0-9][0-9.]*/usbipd-v[0-9][0-9.]*-macos|/releases/download/$version/usbipd-$version-macos|g" "$formula_file"
     
-    # Update version field
-    sed -i.tmp "s|version \"v[0-9][0-9.]*\"|version \"$version\"|g" "$formula_file"
+    # Update version field (remove 'v' prefix for Homebrew)
+    sed -i.tmp "s|version \"[0-9][0-9.]*\"|version \"${version#v}\"|g" "$formula_file"
     
     # Update SHA256 checksum
     sed -i.tmp "s|sha256 \"[a-f0-9]\{64\}\"|sha256 \"$sha256\"|g" "$formula_file"
+    
+    # Update binary filename in install section
+    sed -i.tmp "s|bin.install \"usbipd-v[0-9][0-9.]*-macos\"|bin.install \"usbipd-$version-macos\"|g" "$formula_file"
     
     # Clean up temporary files
     rm -f "$formula_file.tmp"
@@ -306,10 +310,12 @@ validate_formula() {
     # Verify updated values
     log_debug "Verifying formula content updates"
     
-    if grep -q "version \"$expected_version\"" "$formula_file"; then
-        log_debug "✓ Version $expected_version found in formula"
+    # Check for version without 'v' prefix (Homebrew format)
+    local expected_version_clean="${expected_version#v}"
+    if grep -q "version \"$expected_version_clean\"" "$formula_file"; then
+        log_debug "✓ Version $expected_version_clean found in formula"
     else
-        log_error "✗ Version $expected_version not found in updated formula"
+        log_error "✗ Version $expected_version_clean not found in updated formula"
         ((validation_errors++))
     fi
     
@@ -320,10 +326,10 @@ validate_formula() {
         ((validation_errors++))
     fi
     
-    if grep -q "archive/$expected_version.tar.gz" "$formula_file"; then
-        log_debug "✓ Archive URL with version $expected_version found"
+    if grep -q "releases/download/$expected_version/usbipd-$expected_version-macos" "$formula_file"; then
+        log_debug "✓ Binary URL with version $expected_version found"
     else
-        log_error "✗ Archive URL with version $expected_version not found"
+        log_error "✗ Binary URL with version $expected_version not found"
         ((validation_errors++))
     fi
     
