@@ -408,14 +408,24 @@ commit_changes() {
 Automated formula update from repository dispatch event.
 - Updated version to $version
 - Updated SHA256 checksum
-- Updated archive URL
+- Updated binary download URL
 
 🤖 Generated with repository dispatch workflow"
     
     if git commit -m "$commit_message"; then
         log_success "Changes committed successfully"
         log_info "Commit message: feat: update formula to $version"
-        return 0
+        
+        # Push changes to remote repository
+        log_debug "Pushing changes to remote repository..."
+        if git push origin main; then
+            log_success "Changes pushed to remote repository"
+            return 0
+        else
+            log_error "Failed to push changes to remote repository"
+            log_error "Commit was created locally but not pushed"
+            return 6
+        fi
     else
         log_error "Failed to commit changes"
         return 5
