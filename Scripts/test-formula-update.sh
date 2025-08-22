@@ -143,7 +143,7 @@ test_valid_formula_update() {
     local test_content="mock binary content for testing"
     local test_sha256=$(echo -n "${test_content}" | shasum -a 256 | cut -d' ' -f1)
     local test_binary="${TEST_TEMP_DIR}/usbipd-v99.99.99-macos"
-    local test_url="https://github.com/beriberikix/usbipd-mac/archive/refs/tags/v99.99.99.tar.gz"
+    local test_url="https://github.com/beriberikix/usbipd-mac/archive/v99.99.99.tar.gz"
     
     # Create mock binary
     create_mock_binary "${test_binary}" "${test_content}"
@@ -160,8 +160,7 @@ test_valid_formula_update() {
     fi
     
     # Test formula update
-    export GITHUB_EVENT_PATH="${TEST_TEMP_DIR}/mock_payload.json"
-    if "${SCRIPT_DIR}/update-formula-from-dispatch.sh" > "${TEST_TEMP_DIR}/update.log" 2>&1; then
+    if "${SCRIPT_DIR}/update-formula-from-dispatch.sh" --version "${test_version}" --archive-url "${test_url}" --sha256 "${test_sha256}" --dry-run > "${TEST_TEMP_DIR}/update.log" 2>&1; then
         record_test_result "Formula update (valid)" "PASS"
         
         # Verify formula was updated
@@ -232,8 +231,8 @@ test_malformed_payload() {
 }
 EOF
     
-    export GITHUB_EVENT_PATH="${TEST_TEMP_DIR}/malformed_payload.json"
-    if ! "${SCRIPT_DIR}/update-formula-from-dispatch.sh" > "${TEST_TEMP_DIR}/malformed.log" 2>&1; then
+    # Test with invalid arguments
+    if ! "${SCRIPT_DIR}/update-formula-from-dispatch.sh" --version "invalid version format" --archive-url "not-a-url" --sha256 "invalid" > "${TEST_TEMP_DIR}/malformed.log" 2>&1; then
         record_test_result "Formula update (malformed payload)" "PASS"
     else
         record_test_result "Formula update (malformed payload)" "FAIL" "Should have failed for malformed payload"
@@ -247,10 +246,8 @@ test_formula_rollback() {
     # Create a scenario that should trigger rollback
     local original_content=$(cat "${REPO_ROOT}/Formula/usbipd-mac.rb")
     
-    # Temporarily break the formula update script by creating invalid environment
-    export GITHUB_EVENT_PATH="/nonexistent/path"
-    
-    if ! "${SCRIPT_DIR}/update-formula-from-dispatch.sh" > "${TEST_TEMP_DIR}/rollback.log" 2>&1; then
+    # Test rollback by providing invalid arguments
+    if ! "${SCRIPT_DIR}/update-formula-from-dispatch.sh" --version "" --archive-url "" --sha256 "" > "${TEST_TEMP_DIR}/rollback.log" 2>&1; then
         # Check if original formula is intact
         local current_content=$(cat "${REPO_ROOT}/Formula/usbipd-mac.rb")
         if [[ "${original_content}" == "${current_content}" ]]; then
@@ -292,7 +289,7 @@ test_error_handling() {
     # Test issue creation with mock data (dry run)
     if command -v gh >/dev/null 2>&1; then
         # Only test if gh CLI is available
-        if "${issue_script}" --workflow-run "https://github.com/beriberikix/homebrew-usbipd-mac/actions/runs/123456789" --event-type "test" --failure-stage "validation" --dry-run > "${TEST_TEMP_DIR}/issue.log" 2>&1; then
+        if "${issue_script}" --workflow-run "https://github.com/beriberikix/homebrew-usbipd-mac/actions/runs/123456789" --event-type "test" --failure-stage "binary-validation" --dry-run > "${TEST_TEMP_DIR}/issue.log" 2>&1; then
             record_test_result "Issue creation (dry run)" "PASS"
         else
             record_test_result "Issue creation (dry run)" "FAIL" "$(cat "${TEST_TEMP_DIR}/issue.log")"
