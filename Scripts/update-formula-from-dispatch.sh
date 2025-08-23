@@ -217,14 +217,14 @@ update_formula_file() {
         if CHECKSUMS_CONTENT=$(curl -sL "$CHECKSUMS_URL" 2>/dev/null); then
             SYSEXT_SHA256=$(echo "$CHECKSUMS_CONTENT" | grep "USBIPDSystemExtension.systemextension.tar.gz" | cut -d' ' -f1)
             if [[ -n "$SYSEXT_SHA256" && "$SYSEXT_SHA256" =~ ^[a-f0-9]{64}$ ]]; then
-                # Update both checksums in preview
-                sed -i.bak "0,/sha256 \"[a-f0-9]\{64\}\"/s//sha256 \"$sha256\"/" "$temp_formula"
-                sed -i.bak "0,/sha256 \"[a-f0-9]\{64\}\"/s//sha256 \"$SYSEXT_SHA256\"/" "$temp_formula"
+                # Update both checksums in preview with specific targeting
+                sed -i.bak "/^[[:space:]]*url /,/^[[:space:]]*sha256 / { /^[[:space:]]*sha256 / s/sha256 \"[a-f0-9]\{64\}\"/sha256 \"$sha256\"/; }" "$temp_formula"
+                sed -i.bak "/resource \"systemextension\"/,/end/ { /sha256/ s/sha256 \"[a-f0-9]\{64\}\"/sha256 \"$SYSEXT_SHA256\"/; }" "$temp_formula"
             else
-                sed -i.bak "s|sha256 \"[a-f0-9]\{64\}\"|sha256 \"$sha256\"|g" "$temp_formula"
+                sed -i.bak "0,/sha256 \"[a-f0-9]\{64\}\"/s//sha256 \"$sha256\"/" "$temp_formula"
             fi
         else
-            sed -i.bak "s|sha256 \"[a-f0-9]\{64\}\"|sha256 \"$sha256\"|g" "$temp_formula"
+            sed -i.bak "0,/sha256 \"[a-f0-9]\{64\}\"/s//sha256 \"$sha256\"/" "$temp_formula"
         fi
         sed -i.bak -E "s|bin.install \"usbipd-v[0-9.]+(-[^\"]*)?-macos\"|bin.install \"usbipd-$version-macos\"|g" "$temp_formula"
         
@@ -266,13 +266,15 @@ update_formula_file() {
         log_debug "Found system extension SHA256: $SYSEXT_SHA256"
         
         if [[ -n "$SYSEXT_SHA256" && "$SYSEXT_SHA256" =~ ^[a-f0-9]{64}$ ]]; then
-            # Update SHA256 checksums - first main binary, then system extension
-            sed -i.tmp "0,/sha256 \"[a-f0-9]\{64\}\"/s//sha256 \"$sha256\"/" "$formula_file"
-            sed -i.tmp "0,/sha256 \"[a-f0-9]\{64\}\"/s//sha256 \"$SYSEXT_SHA256\"/" "$formula_file"
+            # Update main binary checksum (outside of resource block)
+            sed -i.tmp "/^[[:space:]]*url /,/^[[:space:]]*sha256 / { /^[[:space:]]*sha256 / s/sha256 \"[a-f0-9]\{64\}\"/sha256 \"$sha256\"/; }" "$formula_file"
+            # Update system extension checksum (inside resource block)  
+            sed -i.tmp "/resource \"systemextension\"/,/end/ { /sha256/ s/sha256 \"[a-f0-9]\{64\}\"/sha256 \"$SYSEXT_SHA256\"/; }" "$formula_file"
             log_debug "Updated both main binary and system extension checksums"
         else
             log_warning "Invalid or missing system extension SHA256, updating only main binary checksum"
-            sed -i.tmp "s|sha256 \"[a-f0-9]\{64\}\"|sha256 \"$sha256\"|g" "$formula_file"
+            # Update only the main binary checksum (first occurrence)
+            sed -i.tmp "0,/sha256 \"[a-f0-9]\{64\}\"/s//sha256 \"$sha256\"/" "$formula_file"
         fi
     else
         log_warning "Failed to download checksums file, updating only main binary checksum"
