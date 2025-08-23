@@ -8,18 +8,18 @@ Homebrew tap for [usbipd-mac](https://github.com/beriberikix/usbipd-mac) - a mac
 # Add the tap
 brew tap beriberikix/usbipd-mac
 
-# Install usbipd-mac
-brew install usbipd-mac
+# Install usbip
+brew install usbip
 
 # Start the service
-sudo brew services start usbipd-mac
+sudo brew services start usbip
 ```
 
 ## Updating
 
 ```bash
 # Update to latest version
-brew upgrade usbipd-mac
+brew upgrade usbip
 ```
 
 ## Formula Management
@@ -41,8 +41,8 @@ This tap uses **automated formula updates** via [homebrew-releaser](https://gith
 
 ## Formula Details
 
-- **Package**: `usbipd-mac`
-- **Formula**: [`Formula/usbipd-mac.rb`](Formula/usbipd-mac.rb)
+- **Package**: `usbip`
+- **Formula**: [`Formula/usbip.rb`](Formula/usbip.rb)
 - **Requirements**: macOS 11.0+, Xcode 13.0+ (build time)
 - **License**: MIT
 
@@ -51,7 +51,7 @@ This tap uses **automated formula updates** via [homebrew-releaser](https://gith
 ```
 homebrew-usbipd-mac/
 ├── Formula/
-│   └── usbipd-mac.rb          # Main formula file
+│   └── usbip.rb               # Main formula file
 └── .github/
     └── workflows/
         └── archived/           # Archived webhook workflows (no longer used)

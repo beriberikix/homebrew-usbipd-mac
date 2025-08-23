@@ -29,7 +29,7 @@ cleanup() {
     
     # Restore original formula if backup exists
     if [[ -n "${ORIGINAL_FORMULA}" && -f "${ORIGINAL_FORMULA}" ]]; then
-        local formula_file="${REPO_ROOT}/Formula/usbipd-mac.rb"
+        local formula_file="${REPO_ROOT}/Formula/usbip.rb"
         if [[ -f "${formula_file}.test-backup" ]]; then
             mv "${formula_file}.test-backup" "${formula_file}"
             echo -e "${YELLOW}Restored original formula file${NC}"
@@ -79,7 +79,7 @@ setup_test_environment() {
     log_info "Test directory: ${TEST_TEMP_DIR}"
     
     # Backup original formula
-    local formula_file="${REPO_ROOT}/Formula/usbipd-mac.rb"
+    local formula_file="${REPO_ROOT}/Formula/usbip.rb"
     if [[ -f "${formula_file}" ]]; then
         cp "${formula_file}" "${formula_file}.test-backup"
         ORIGINAL_FORMULA="${formula_file}"
@@ -165,7 +165,7 @@ test_valid_formula_update() {
         
         # In dry-run mode, check that the script completed successfully
         # and that the formula file was NOT actually modified
-        if ! grep -q "${test_version}" "${REPO_ROOT}/Formula/usbipd-mac.rb"; then
+        if ! grep -q "${test_version}" "${REPO_ROOT}/Formula/usbip.rb"; then
             record_test_result "Formula dry-run behavior" "PASS"
         else
             record_test_result "Formula dry-run behavior" "FAIL" "Formula should not be modified in dry-run mode"
@@ -239,12 +239,12 @@ test_formula_rollback() {
     log_info "Testing formula rollback mechanism..."
     
     # Create a scenario that should trigger rollback
-    local original_content=$(cat "${REPO_ROOT}/Formula/usbipd-mac.rb")
+    local original_content=$(cat "${REPO_ROOT}/Formula/usbip.rb")
     
     # Test rollback by providing invalid arguments
     if ! "${SCRIPT_DIR}/update-formula-from-dispatch.sh" --version "" --archive-url "" --sha256 "" > "${TEST_TEMP_DIR}/rollback.log" 2>&1; then
         # Check if original formula is intact
-        local current_content=$(cat "${REPO_ROOT}/Formula/usbipd-mac.rb")
+        local current_content=$(cat "${REPO_ROOT}/Formula/usbip.rb")
         if [[ "${original_content}" == "${current_content}" ]]; then
             record_test_result "Formula rollback mechanism" "PASS"
         else
@@ -259,7 +259,7 @@ test_formula_rollback() {
 test_ruby_syntax_validation() {
     log_info "Testing Ruby syntax validation..."
     
-    local formula_file="${REPO_ROOT}/Formula/usbipd-mac.rb"
+    local formula_file="${REPO_ROOT}/Formula/usbip.rb"
     
     # Test current formula syntax
     if ruby -c "${formula_file}" > "${TEST_TEMP_DIR}/syntax.log" 2>&1; then

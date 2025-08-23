@@ -23,7 +23,7 @@ SCRIPT_DESCRIPTION="Standalone formula update script for usbipd-mac Homebrew tap
 
 # Default configuration
 DEFAULT_SOURCE_REPO="beriberikix/usbipd-mac"
-DEFAULT_FORMULA_FILE="Formula/usbipd-mac.rb"
+DEFAULT_FORMULA_FILE="Formula/usbip.rb"
 METADATA_FILENAME="homebrew-metadata.json"
 BACKUP_SUFFIX=".backup"
 

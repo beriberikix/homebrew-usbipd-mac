@@ -8,7 +8,7 @@ set -euo pipefail
 # Configuration
 readonly SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly FORMULA_FILE="Formula/usbipd-mac.rb"
+readonly FORMULA_FILE="Formula/usbip.rb"
 readonly BACKUP_SUFFIX=".backup"
 readonly TEMP_DIR=$(mktemp -d)
 
@@ -598,7 +598,7 @@ handle_error() {
     log_error "Script failed on line $line_number with exit code $exit_code"
     
     # Attempt to rollback formula file if a backup exists
-    local formula_file="/Users/jberi/code/homebrew-usbipd-mac/Formula/usbipd-mac.rb" # Use absolute path for consistency
+    local formula_file="/Users/jberi/code/homebrew-usbipd-mac/Formula/usbip.rb" # Use absolute path for consistency
     local backup_file="${formula_file}${BACKUP_SUFFIX}"
     if [[ -f "${backup_file}" ]]; then
         log_warning "Attempting to restore formula from backup: ${backup_file}"

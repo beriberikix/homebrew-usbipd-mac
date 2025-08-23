@@ -272,7 +272,7 @@ EOF
 ## Troubleshooting Steps
 
 ### Immediate Actions
-1. **Ruby syntax check**: Run `ruby -c Formula/usbipd-mac.rb` to check syntax
+1. **Ruby syntax check**: Run `ruby -c Formula/usbip.rb` to check syntax
 2. **Validate updated values**: Ensure version and SHA256 were correctly updated
 3. **Check formula structure**: Verify all required Homebrew formula components
 
@@ -422,13 +422,13 @@ EOF
   ```
 - **Manual Git Operations**: Complete git operations manually if needed:
   ```bash
-  git add Formula/usbipd-mac.rb
+  git add Formula/usbip.rb
   git commit -m "feat: update formula to [VERSION]"
   git push origin main
   ```
 
 ### Verification
-1. Verify the formula syntax with `ruby -c Formula/usbipd-mac.rb`
+1. Verify the formula syntax with `ruby -c Formula/usbip.rb`
 2. Test the formula with `brew install --build-from-source usbipd-mac`
 3. Confirm git repository state is clean
 4. Validate the formula version matches the release

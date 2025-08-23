@@ -1,7 +1,7 @@
 # typed: true
 # frozen_string_literal: true
 
-class UsbipdMac < Formula
+class Usbip < Formula
   desc "Macos implementation of the usb/ip protocol"
   homepage "https://github.com/beriberikix/usbipd-mac"
   url "https://github.com/beriberikix/usbipd-mac/releases/download/v0.1.33/usbipd-v0.1.33-macos"
@@ -56,7 +56,7 @@ class UsbipdMac < Formula
     puts "     sudo usbipd install-system-extension"
     puts
     puts "  2. Start the service:"
-    puts "     sudo brew services start usbipd-mac"
+    puts "     sudo brew services start usbip"
     puts
     puts "  3. Approve the system extension in:"
     puts "     System Preferences → Security & Privacy → General"
