@@ -10,8 +10,8 @@ class UsbipdMac < Formula
 
   # System extension resource
   resource "systemextension" do
-    url "https://github.com/beriberikix/usbipd-mac/releases/download/v0.1.26/USBIPDSystemExtension.systemextension.tar.gz"
-    sha256 "acbd7a72d6b5458b7f8b2a4aa8362548598b0a5ccf842f244fcf688723f0c235"
+    url "https://github.com/beriberikix/usbipd-mac/releases/download/v0.1.30/USBIPDSystemExtension.systemextension.tar.gz"
+    sha256 "07979920eb77dc8bdfd4807f3bcd711d2733e1effdc3c88b7220a301e97c9e47"
   end
 
   depends_on :macos => :big_sur

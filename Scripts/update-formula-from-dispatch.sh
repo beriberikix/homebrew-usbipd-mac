@@ -210,8 +210,22 @@ update_formula_file() {
         
         # Apply substitutions to temp file - use more flexible patterns
         sed -i.bak -E "s|/releases/download/v[0-9.]+(-[^/]*)?/usbipd-v[0-9.]+(-[^\"]*)?-macos|/releases/download/$version/usbipd-$version-macos|g" "$temp_formula"
+        sed -i.bak -E "s|/releases/download/v[0-9.]+(-[^/]*)?/USBIPDSystemExtension\.systemextension\.tar\.gz|/releases/download/$version/USBIPDSystemExtension.systemextension.tar.gz|g" "$temp_formula"
         sed -i.bak -E "s|version \"[0-9.]+(-[^\"]*)?\"| version \"${version#v}\"|g" "$temp_formula"
-        sed -i.bak "s|sha256 \"[a-f0-9]\{64\}\"|sha256 \"$sha256\"|g" "$temp_formula"
+        # Download checksums for system extension SHA256
+        CHECKSUMS_URL="https://github.com/beriberikix/usbipd-mac/releases/download/$version/checksums-${version}.sha256"
+        if CHECKSUMS_CONTENT=$(curl -sL "$CHECKSUMS_URL" 2>/dev/null); then
+            SYSEXT_SHA256=$(echo "$CHECKSUMS_CONTENT" | grep "USBIPDSystemExtension.systemextension.tar.gz" | cut -d' ' -f1)
+            if [[ -n "$SYSEXT_SHA256" && "$SYSEXT_SHA256" =~ ^[a-f0-9]{64}$ ]]; then
+                # Update both checksums in preview
+                sed -i.bak "0,/sha256 \"[a-f0-9]\{64\}\"/s//sha256 \"$sha256\"/" "$temp_formula"
+                sed -i.bak "0,/sha256 \"[a-f0-9]\{64\}\"/s//sha256 \"$SYSEXT_SHA256\"/" "$temp_formula"
+            else
+                sed -i.bak "s|sha256 \"[a-f0-9]\{64\}\"|sha256 \"$sha256\"|g" "$temp_formula"
+            fi
+        else
+            sed -i.bak "s|sha256 \"[a-f0-9]\{64\}\"|sha256 \"$sha256\"|g" "$temp_formula"
+        fi
         sed -i.bak -E "s|bin.install \"usbipd-v[0-9.]+(-[^\"]*)?-macos\"|bin.install \"usbipd-$version-macos\"|g" "$temp_formula"
         
         # Show differences
@@ -237,11 +251,33 @@ update_formula_file() {
     # Update version in binary download URL - use more flexible patterns
     sed -i.tmp -E "s|/releases/download/v[0-9.]+(-[^/]*)?/usbipd-v[0-9.]+(-[^\"]*)?-macos|/releases/download/$version/usbipd-$version-macos|g" "$formula_file"
     
+    # Update system extension URL
+    sed -i.tmp -E "s|/releases/download/v[0-9.]+(-[^/]*)?/USBIPDSystemExtension\.systemextension\.tar\.gz|/releases/download/$version/USBIPDSystemExtension.systemextension.tar.gz|g" "$formula_file"
+    
     # Update version field (remove 'v' prefix for Homebrew)
     sed -i.tmp -E "s|version \"[0-9.]+(-[^\"]*)?\"| version \"${version#v}\"|g" "$formula_file"
     
-    # Update SHA256 checksum
-    sed -i.tmp "s|sha256 \"[a-f0-9]\{64\}\"|sha256 \"$sha256\"|g" "$formula_file"
+    # Download checksums and extract system extension SHA256
+    CHECKSUMS_URL="https://github.com/beriberikix/usbipd-mac/releases/download/$version/checksums-${version}.sha256"
+    log_debug "Downloading checksums from: $CHECKSUMS_URL"
+    
+    if CHECKSUMS_CONTENT=$(curl -sL "$CHECKSUMS_URL"); then
+        SYSEXT_SHA256=$(echo "$CHECKSUMS_CONTENT" | grep "USBIPDSystemExtension.systemextension.tar.gz" | cut -d' ' -f1)
+        log_debug "Found system extension SHA256: $SYSEXT_SHA256"
+        
+        if [[ -n "$SYSEXT_SHA256" && "$SYSEXT_SHA256" =~ ^[a-f0-9]{64}$ ]]; then
+            # Update SHA256 checksums - first main binary, then system extension
+            sed -i.tmp "0,/sha256 \"[a-f0-9]\{64\}\"/s//sha256 \"$sha256\"/" "$formula_file"
+            sed -i.tmp "0,/sha256 \"[a-f0-9]\{64\}\"/s//sha256 \"$SYSEXT_SHA256\"/" "$formula_file"
+            log_debug "Updated both main binary and system extension checksums"
+        else
+            log_warning "Invalid or missing system extension SHA256, updating only main binary checksum"
+            sed -i.tmp "s|sha256 \"[a-f0-9]\{64\}\"|sha256 \"$sha256\"|g" "$formula_file"
+        fi
+    else
+        log_warning "Failed to download checksums file, updating only main binary checksum"
+        sed -i.tmp "s|sha256 \"[a-f0-9]\{64\}\"|sha256 \"$sha256\"|g" "$formula_file"
+    fi
     
     # Update binary filename in install section
     sed -i.tmp -E "s|bin.install \"usbipd-v[0-9.]+(-[^\"]*)?-macos\"|bin.install \"usbipd-$version-macos\"|g" "$formula_file"
