@@ -208,11 +208,11 @@ update_formula_file() {
         local temp_formula="$TEMP_DIR/formula-preview.rb"
         cp "$formula_file" "$temp_formula"
         
-        # Apply substitutions to temp file
-        sed -i.bak "s|/releases/download/v[0-9][0-9.]*/usbipd-v[0-9][0-9.]*-macos|/releases/download/$version/usbipd-$version-macos|g" "$temp_formula"
-        sed -i.bak "s|version \"[0-9][0-9.]*\"|version \"${version#v}\"|g" "$temp_formula"
+        # Apply substitutions to temp file - use more flexible patterns
+        sed -i.bak -E "s|/releases/download/v[0-9.]+(-[^/]*)?/usbipd-v[0-9.]+(-[^\"]*)?-macos|/releases/download/$version/usbipd-$version-macos|g" "$temp_formula"
+        sed -i.bak -E "s|version \"[0-9.]+(-[^\"]*)?\"| version \"${version#v}\"|g" "$temp_formula"
         sed -i.bak "s|sha256 \"[a-f0-9]\{64\}\"|sha256 \"$sha256\"|g" "$temp_formula"
-        sed -i.bak "s|bin.install \"usbipd-v[0-9][0-9.]*-macos\"|bin.install \"usbipd-$version-macos\"|g" "$temp_formula"
+        sed -i.bak -E "s|bin.install \"usbipd-v[0-9.]+(-[^\"]*)?-macos\"|bin.install \"usbipd-$version-macos\"|g" "$temp_formula"
         
         # Show differences
         log_info "DRY-RUN: Would make the following changes:"
@@ -234,17 +234,17 @@ update_formula_file() {
     # Apply actual updates to formula file
     log_debug "Applying formula updates"
     
-    # Update version in binary download URL
-    sed -i.tmp "s|/releases/download/v[0-9][0-9.]*/usbipd-v[0-9][0-9.]*-macos|/releases/download/$version/usbipd-$version-macos|g" "$formula_file"
+    # Update version in binary download URL - use more flexible patterns
+    sed -i.tmp -E "s|/releases/download/v[0-9.]+(-[^/]*)?/usbipd-v[0-9.]+(-[^\"]*)?-macos|/releases/download/$version/usbipd-$version-macos|g" "$formula_file"
     
     # Update version field (remove 'v' prefix for Homebrew)
-    sed -i.tmp "s|version \"[0-9][0-9.]*\"|version \"${version#v}\"|g" "$formula_file"
+    sed -i.tmp -E "s|version \"[0-9.]+(-[^\"]*)?\"| version \"${version#v}\"|g" "$formula_file"
     
     # Update SHA256 checksum
     sed -i.tmp "s|sha256 \"[a-f0-9]\{64\}\"|sha256 \"$sha256\"|g" "$formula_file"
     
     # Update binary filename in install section
-    sed -i.tmp "s|bin.install \"usbipd-v[0-9][0-9.]*-macos\"|bin.install \"usbipd-$version-macos\"|g" "$formula_file"
+    sed -i.tmp -E "s|bin.install \"usbipd-v[0-9.]+(-[^\"]*)?-macos\"|bin.install \"usbipd-$version-macos\"|g" "$formula_file"
     
     # Clean up temporary files
     rm -f "$formula_file.tmp"
