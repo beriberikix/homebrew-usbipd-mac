@@ -21,13 +21,13 @@ class UsbipdMac < Formula
     
     # Install system extension bundle
     resource("systemextension").stage do
-      # Create system extension directory in Homebrew prefix
-      (prefix/"SystemExtensions").mkpath
+      # Create system extension directory in expected Library/SystemExtensions path
+      (prefix/"Library/SystemExtensions").mkpath
       
       # The tar.gz extracts to just "Contents" directory, so we need to reconstruct the bundle
       if Dir.exist?("Contents")
         puts "Found Contents directory, reconstructing system extension bundle..."
-        bundle_dir = prefix/"SystemExtensions"/"USBIPDSystemExtension.systemextension"
+        bundle_dir = prefix/"Library/SystemExtensions"/"USBIPDSystemExtension.systemextension"
         bundle_dir.mkpath
         cp_r "Contents", bundle_dir
         puts "System extension bundle created at: #{bundle_dir}"
@@ -35,7 +35,7 @@ class UsbipdMac < Formula
         # If we have a .systemextension directory, copy it directly
         Dir.glob("*.systemextension") do |bundle|
           puts "Found system extension bundle: #{bundle}"
-          cp_r bundle, prefix/"SystemExtensions"
+          cp_r bundle, prefix/"Library/SystemExtensions"
         end
       else
         puts "Warning: No system extension bundle found in staged directory"
@@ -76,6 +76,6 @@ class UsbipdMac < Formula
 
   test do
     assert_match "USB/IP Daemon for macOS", shell_output("#{bin}/usbipd --version")
-    assert_path_exists "#{prefix}/SystemExtensions/USBIPDSystemExtension.systemextension"
+    assert_path_exists "#{prefix}/Library/SystemExtensions/USBIPDSystemExtension.systemextension"
   end
 end
