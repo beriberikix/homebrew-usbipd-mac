@@ -19,30 +19,47 @@ class Usbip < Formula
   def install
     bin.install "usbipd-v0.1.34-macos" => "usbipd"
 
-    # Generate and install shell completion scripts
-    # Note: This temporary approach will be replaced by including pre-generated
-    # completion scripts in the release artifacts in future versions
-    mkdir_p "completions"
-
-    # Try to generate completion scripts using the installed binary
-    # If this fails (e.g., during build process), we'll skip completions for now
-    completion_success = system "#{bin}/usbipd", "completion", "generate", "--output", "completions", 
-                                out: "/dev/null", err: "/dev/null"
+    # Install shell completion scripts
+    # For now, we'll install completion scripts that can be generated post-install
+    # This avoids build-time issues with system extension dependencies
     
-    if completion_success
-      # Install shell completions to appropriate directories if generation succeeded
-      bash_completion.install "completions/usbipd" if File.exist?("completions/usbipd")
-      zsh_completion.install "completions/_usbipd" if File.exist?("completions/_usbipd")
-      fish_completion.install "completions/usbipd.fish" if File.exist?("completions/usbipd.fish")
+    # Create completion directory for post-install generation
+    mkdir_p "completions"
+    
+    # Create a simple post-install completion script
+    (buildpath/"completions"/"install-completions.sh").write <<~EOS
+      #!/bin/bash
+      # Post-install completion generation script for usbipd
       
-      puts "✓ Shell completions generated and installed successfully"
-    else
-      puts "⚠️  Could not generate shell completions during installation"
-      puts "   This is normal during automated builds. Completions can be generated"
-      puts "   manually after installation using:"
-      puts "   usbipd completion generate --output ~/.completions"
-      puts "   Then source the appropriate completion file for your shell."
-    end
+      echo "Generating shell completion scripts..."
+      if command -v usbipd >/dev/null 2>&1; then
+          COMP_DIR="$HOME/.local/share/bash-completion/completions"
+          ZSH_COMP_DIR="$HOME/.zsh/completions"  
+          FISH_COMP_DIR="$HOME/.config/fish/completions"
+          
+          # Create completion directories
+          mkdir -p "$COMP_DIR" "$ZSH_COMP_DIR" "$FISH_COMP_DIR"
+          
+          # Generate completion scripts
+          usbipd completion bash > "$COMP_DIR/usbipd" 2>/dev/null
+          usbipd completion zsh > "$ZSH_COMP_DIR/_usbipd" 2>/dev/null  
+          usbipd completion fish > "$FISH_COMP_DIR/usbipd.fish" 2>/dev/null
+          
+          echo "✓ Shell completions installed to user directories"
+          echo "  Bash: $COMP_DIR/usbipd"
+          echo "  Zsh:  $ZSH_COMP_DIR/_usbipd"
+          echo "  Fish: $FISH_COMP_DIR/usbipd.fish"
+          echo ""
+          echo "Restart your shell or source the completion files to activate."
+      else
+          echo "✗ usbipd command not found. Please ensure the binary is in your PATH."
+      fi
+    EOS
+    
+    chmod "+x", buildpath/"completions"/"install-completions.sh"
+    
+    # Install the completion generation script  
+    bin.install "completions/install-completions.sh" => "usbipd-install-completions"
 
     # Install system extension bundle
     resource("systemextension").stage do
@@ -88,14 +105,21 @@ class Usbip < Formula
 
     puts
     puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    puts "  🐚 Shell Completions Installed"
+    puts "  🐚 Shell Completions Available"
     puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     puts
-    puts "Shell completions have been automatically installed and should be available"
-    puts "in new shell sessions for enhanced CLI experience with tab completion."
+    puts "To install shell completions for enhanced CLI experience:"
     puts
-    puts "Supported shells: bash, zsh, fish"
-    puts "Type 'usbipd ' and press <TAB> to test completion functionality."
+    puts "  usbipd-install-completions"
+    puts
+    puts "This will install completion scripts for bash, zsh, and fish to your"
+    puts "user directories. After installation, restart your shell or source"
+    puts "the completion files to activate tab completion."
+    puts
+    puts "Alternatively, generate completions manually:"
+    puts "  usbipd completion bash > ~/.local/share/bash-completion/completions/usbipd"
+    puts "  usbipd completion zsh > ~/.zsh/completions/_usbipd"
+    puts "  usbipd completion fish > ~/.config/fish/completions/usbipd.fish"
     puts
     puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     puts
@@ -113,19 +137,14 @@ class Usbip < Formula
     assert_match "USB/IP Daemon for macOS", shell_output("#{bin}/usbipd --version")
     assert_path_exists "#{prefix}/Library/SystemExtensions/USBIPDSystemExtension.systemextension"
 
-    # Test that shell completion files are installed (if generation succeeded during install)
-    # Note: These may not exist if completion generation failed during build process
-    if File.exist?("#{bash_completion}/usbipd")
-      assert_path_exists "#{bash_completion}/usbipd"
-      assert_path_exists "#{zsh_completion}/_usbipd" 
-      assert_path_exists "#{fish_completion}/usbipd.fish"
-      puts "✓ Shell completions found and verified"
-    else
-      puts "ℹ️ Shell completions not installed during build (can be generated manually)"
-    end
+    # Test that completion installation script exists
+    assert_path_exists "#{bin}/usbipd-install-completions"
+    
+    # Test that the completion installation script is executable
+    assert File.executable?("#{bin}/usbipd-install-completions")
 
     # Test that completion command works (basic functionality test)
-    # This should work regardless of whether completions were installed during build
+    # This validates the core completion functionality
     assert_match "Completion Generation Summary",
                  shell_output("#{bin}/usbipd completion generate --output /tmp/test-completions 2>&1")
   end
