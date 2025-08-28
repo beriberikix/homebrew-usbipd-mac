@@ -4,20 +4,20 @@
 class Usbip < Formula
   desc "Macos implementation of the usb/ip protocol"
   homepage "https://github.com/beriberikix/usbipd-mac"
-  url "https://github.com/beriberikix/usbipd-mac/releases/download/v0.1.34/usbipd-v0.1.34-macos"
-  version "0.1.34"
-  sha256 "08e9777c110a174987e8639d793722b9fe43d31c0ffa30eb32474c76cf19214d"
+  url "https://github.com/beriberikix/usbipd-mac/releases/download/v0.1.35-test/usbipd-v0.1.35-test-macos"
+   version "0.1.35-test"
+  sha256 "39d89067ed51babbef99609ffe9542cab8b3936407a74e8fbccb2a6821dc01fa"
 
   depends_on macos: :big_sur
 
   # System extension resource
   resource "systemextension" do
-    url "https://github.com/beriberikix/usbipd-mac/releases/download/v0.1.34/USBIPDSystemExtension.systemextension.tar.gz"
-    sha256 "3c255613d6063bfcae2c1d6c3acc2a3fdac041a9a443d340defe6d47759a450a"
+    url "https://github.com/beriberikix/usbipd-mac/releases/download/v0.1.35-test/USBIPDSystemExtension.systemextension.tar.gz"
+    sha256 "b458686beef0e1c9897375bfd2babecd99c118c9038c184f81576ea297a1e7e0"
   end
 
   def install
-    bin.install "usbipd-v0.1.34-macos" => "usbipd"
+    bin.install "usbipd-v0.1.35-test-macos" => "usbipd"
 
     # Install system extension bundle
     resource("systemextension").stage do
