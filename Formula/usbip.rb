@@ -106,6 +106,7 @@ class Usbip < Formula
     assert_path_exists "#{fish_completion}/usbipd.fish"
 
     # Test that completion command works
-    assert_match "Completion Generation Summary", shell_output("#{bin}/usbipd completion generate --output /tmp/test-completions 2>&1")
+    assert_match "Completion Generation Summary", 
+                 shell_output("#{bin}/usbipd completion generate --output /tmp/test-completions 2>&1")
   end
 end
