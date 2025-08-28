@@ -2,6 +2,9 @@
 
 # update-formula-from-dispatch.sh - Formula update script for repository dispatch events
 # This script processes repository dispatch payloads and updates Homebrew formula files
+#
+# NOTE: This script focuses on basic formula updates. For updates that need to preserve
+# or add shell completion functionality, use update-formula-with-completions.sh instead.
 
 set -euo pipefail
 

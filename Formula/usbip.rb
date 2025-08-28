@@ -19,6 +19,27 @@ class Usbip < Formula
   def install
     bin.install "usbipd-v0.1.33-macos" => "usbipd"
     
+    # Generate and install shell completion scripts
+    # Note: This temporary approach will be replaced by including pre-generated 
+    # completion scripts in the release artifacts in future versions
+    mkdir_p "completions"
+    
+    # Generate completion scripts using the installed binary
+    system bin/"usbipd", "completion", "generate", "--output", "completions"
+    
+    # Install shell completions to appropriate directories
+    if File.exist?("completions/usbipd")
+      bash_completion.install "completions/usbipd"
+    end
+    
+    if File.exist?("completions/_usbipd")
+      zsh_completion.install "completions/_usbipd"
+    end
+    
+    if File.exist?("completions/usbipd.fish")
+      fish_completion.install "completions/usbipd.fish"
+    end
+    
     # Install system extension bundle
     resource("systemextension").stage do
       # Create system extension directory in expected Library/SystemExtensions path
@@ -63,6 +84,16 @@ class Usbip < Formula
     
     puts
     puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    puts "  🐚 Shell Completions Installed"  
+    puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    puts
+    puts "Shell completions have been automatically installed and should be available"
+    puts "in new shell sessions for enhanced CLI experience with tab completion."
+    puts
+    puts "Supported shells: bash, zsh, fish"
+    puts "Type 'usbipd ' and press <TAB> to test completion functionality."
+    puts
+    puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     puts
   end
 
@@ -77,5 +108,13 @@ class Usbip < Formula
   test do
     assert_match "USB/IP Daemon for macOS", shell_output("#{bin}/usbipd --version")
     assert_path_exists "#{prefix}/Library/SystemExtensions/USBIPDSystemExtension.systemextension"
+    
+    # Test that shell completion files are installed
+    assert_path_exists "#{bash_completion}/usbipd"
+    assert_path_exists "#{zsh_completion}/_usbipd"
+    assert_path_exists "#{fish_completion}/usbipd.fish"
+    
+    # Test that completion command works
+    assert_match "Completion Generation Summary", shell_output("#{bin}/usbipd completion generate --output /tmp/test-completions 2>&1", 0)
   end
 end
