@@ -5,8 +5,9 @@ class Usbip < Formula
   desc "Macos implementation of the usb/ip protocol"
   homepage "https://github.com/beriberikix/usbipd-mac"
   url "https://github.com/beriberikix/usbipd-mac/releases/download/v0.1.33/usbipd-v0.1.33-macos"
-    version "0.1.33"
   sha256 "b7fdcfa514cb126ef78178c03b7b37506cb98f3349461e38709f62d4a4c5f097"
+
+  depends_on macos: :big_sur
 
   # System extension resource
   resource "systemextension" do
@@ -14,37 +15,35 @@ class Usbip < Formula
     sha256 "4e712eb342d5f52dde115812c2596a8715c33552558238e719d05ade8288d0e3"
   end
 
-  depends_on :macos => :big_sur
-
   def install
     bin.install "usbipd-v0.1.33-macos" => "usbipd"
-    
+
     # Generate and install shell completion scripts
-    # Note: This temporary approach will be replaced by including pre-generated 
+    # Note: This temporary approach will be replaced by including pre-generated
     # completion scripts in the release artifacts in future versions
     mkdir_p "completions"
-    
+
     # Generate completion scripts using the installed binary
     system bin/"usbipd", "completion", "generate", "--output", "completions"
-    
+
     # Install shell completions to appropriate directories
     if File.exist?("completions/usbipd")
       bash_completion.install "completions/usbipd"
     end
-    
+
     if File.exist?("completions/_usbipd")
       zsh_completion.install "completions/_usbipd"
     end
-    
+
     if File.exist?("completions/usbipd.fish")
       fish_completion.install "completions/usbipd.fish"
     end
-    
+
     # Install system extension bundle
     resource("systemextension").stage do
       # Create system extension directory in expected Library/SystemExtensions path
       (prefix/"Library/SystemExtensions").mkpath
-      
+
       # The tar.gz extracts to just "Contents" directory, so we need to reconstruct the bundle
       if Dir.exist?("Contents")
         puts "Found Contents directory, reconstructing system extension bundle..."
@@ -60,7 +59,7 @@ class Usbip < Formula
         end
       else
         puts "Warning: No system extension bundle found in staged directory"
-        puts "Contents: #{Dir.glob('*').inspect}"
+        puts "Contents: #{Dir.glob("*").inspect}"
       end
     end
   end
@@ -81,10 +80,10 @@ class Usbip < Formula
     puts
     puts "  3. Approve the system extension in:"
     puts "     System Preferences → Security & Privacy → General"
-    
+
     puts
     puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    puts "  🐚 Shell Completions Installed"  
+    puts "  🐚 Shell Completions Installed"
     puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     puts
     puts "Shell completions have been automatically installed and should be available"
@@ -108,12 +107,12 @@ class Usbip < Formula
   test do
     assert_match "USB/IP Daemon for macOS", shell_output("#{bin}/usbipd --version")
     assert_path_exists "#{prefix}/Library/SystemExtensions/USBIPDSystemExtension.systemextension"
-    
+
     # Test that shell completion files are installed
     assert_path_exists "#{bash_completion}/usbipd"
     assert_path_exists "#{zsh_completion}/_usbipd"
     assert_path_exists "#{fish_completion}/usbipd.fish"
-    
+
     # Test that completion command works
     assert_match "Completion Generation Summary", shell_output("#{bin}/usbipd completion generate --output /tmp/test-completions 2>&1", 0)
   end
