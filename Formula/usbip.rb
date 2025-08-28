@@ -40,10 +40,17 @@ class Usbip < Formula
           # Create completion directories
           mkdir -p "$COMP_DIR" "$ZSH_COMP_DIR" "$FISH_COMP_DIR"
           
-          # Generate completion scripts
-          usbipd completion bash > "$COMP_DIR/usbipd" 2>/dev/null
-          usbipd completion zsh > "$ZSH_COMP_DIR/_usbipd" 2>/dev/null  
-          usbipd completion fish > "$FISH_COMP_DIR/usbipd.fish" 2>/dev/null
+          # Generate completion scripts using the generate subcommand
+          mkdir -p /tmp/usbipd-completions
+          usbipd completion generate --output /tmp/usbipd-completions 2>/dev/null
+          
+          # Copy generated scripts to user directories
+          [ -f /tmp/usbipd-completions/usbipd ] && cp /tmp/usbipd-completions/usbipd "$COMP_DIR/usbipd"
+          [ -f /tmp/usbipd-completions/_usbipd ] && cp /tmp/usbipd-completions/_usbipd "$ZSH_COMP_DIR/_usbipd"
+          [ -f /tmp/usbipd-completions/usbipd.fish ] && cp /tmp/usbipd-completions/usbipd.fish "$FISH_COMP_DIR/usbipd.fish"
+          
+          # Clean up temporary directory
+          rm -rf /tmp/usbipd-completions
           
           echo "✓ Shell completions installed to user directories"
           echo "  Bash: $COMP_DIR/usbipd"
