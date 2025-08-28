@@ -26,19 +26,20 @@ class Usbip < Formula
 
     # Try to generate completion scripts using the installed binary
     # If this fails (e.g., during build process), we'll skip completions for now
-    begin
-      system "#{bin}/usbipd", "completion", "generate", "--output", "completions", 
-             exception: true, err: :close
-      
+    completion_success = system "#{bin}/usbipd", "completion", "generate", "--output", "completions", 
+                                out: "/dev/null", err: "/dev/null"
+    
+    if completion_success
       # Install shell completions to appropriate directories if generation succeeded
       bash_completion.install "completions/usbipd" if File.exist?("completions/usbipd")
       zsh_completion.install "completions/_usbipd" if File.exist?("completions/_usbipd")
       fish_completion.install "completions/usbipd.fish" if File.exist?("completions/usbipd.fish")
       
       puts "✓ Shell completions generated and installed successfully"
-    rescue StandardError => e
-      puts "⚠️  Could not generate shell completions during installation: #{e.message}"
-      puts "   Completions can be generated manually after installation using:"
+    else
+      puts "⚠️  Could not generate shell completions during installation"
+      puts "   This is normal during automated builds. Completions can be generated"
+      puts "   manually after installation using:"
       puts "   usbipd completion generate --output ~/.completions"
       puts "   Then source the appropriate completion file for your shell."
     end
