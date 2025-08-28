@@ -4,19 +4,19 @@
 class Usbip < Formula
   desc "Macos implementation of the usb/ip protocol"
   homepage "https://github.com/beriberikix/usbipd-mac"
-  url "https://github.com/beriberikix/usbipd-mac/releases/download/v0.1.33/usbipd-v0.1.33-macos"
-  sha256 "b7fdcfa514cb126ef78178c03b7b37506cb98f3349461e38709f62d4a4c5f097"
+  url "https://github.com/beriberikix/usbipd-mac/releases/download/v0.1.34/usbipd-v0.1.34-macos"
+  sha256 "08e9777c110a174987e8639d793722b9fe43d31c0ffa30eb32474c76cf19214d"
 
   depends_on macos: :big_sur
 
   # System extension resource
   resource "systemextension" do
-    url "https://github.com/beriberikix/usbipd-mac/releases/download/v0.1.33/USBIPDSystemExtension.systemextension.tar.gz"
-    sha256 "4e712eb342d5f52dde115812c2596a8715c33552558238e719d05ade8288d0e3"
+    url "https://github.com/beriberikix/usbipd-mac/releases/download/v0.1.34/USBIPDSystemExtension.systemextension.tar.gz"
+    sha256 "3c255613d6063bfcae2c1d6c3acc2a3fdac041a9a443d340defe6d47759a450a"
   end
 
   def install
-    bin.install "usbipd-v0.1.33-macos" => "usbipd"
+    bin.install "usbipd-v0.1.34-macos" => "usbipd"
 
     # Generate and install shell completion scripts
     # Note: This temporary approach will be replaced by including pre-generated
