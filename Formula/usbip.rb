@@ -27,17 +27,9 @@ class Usbip < Formula
     system bin/"usbipd", "completion", "generate", "--output", "completions"
 
     # Install shell completions to appropriate directories
-    if File.exist?("completions/usbipd")
-      bash_completion.install "completions/usbipd"
-    end
-
-    if File.exist?("completions/_usbipd")
-      zsh_completion.install "completions/_usbipd"
-    end
-
-    if File.exist?("completions/usbipd.fish")
-      fish_completion.install "completions/usbipd.fish"
-    end
+    bash_completion.install "completions/usbipd" if File.exist?("completions/usbipd")
+    zsh_completion.install "completions/_usbipd" if File.exist?("completions/_usbipd")
+    fish_completion.install "completions/usbipd.fish" if File.exist?("completions/usbipd.fish")
 
     # Install system extension bundle
     resource("systemextension").stage do
@@ -114,6 +106,6 @@ class Usbip < Formula
     assert_path_exists "#{fish_completion}/usbipd.fish"
 
     # Test that completion command works
-    assert_match "Completion Generation Summary", shell_output("#{bin}/usbipd completion generate --output /tmp/test-completions 2>&1", 0)
+    assert_match "Completion Generation Summary", shell_output("#{bin}/usbipd completion generate --output /tmp/test-completions 2>&1")
   end
 end
