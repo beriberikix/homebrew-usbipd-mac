@@ -5,6 +5,7 @@ class Usbip < Formula
   desc "Macos implementation of the usb/ip protocol"
   homepage "https://github.com/beriberikix/usbipd-mac"
   url "https://github.com/beriberikix/usbipd-mac/releases/download/v0.1.34/usbipd-v0.1.34-macos"
+  version "0.1.34"
   sha256 "08e9777c110a174987e8639d793722b9fe43d31c0ffa30eb32474c76cf19214d"
 
   depends_on macos: :big_sur
